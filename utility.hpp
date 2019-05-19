@@ -35,32 +35,6 @@ class Score {
 		static const Score half;
 };
 
-class Player {
-	private:
-		Player();
-		uint8_t player;
-
-		static const std::string names[5];
-	public:
-		Player( uint8_t init );
-		Player& operator ++();
-		Player& operator --();
-		void operator += (const uint8_t op);
-		void operator -= (const uint8_t op);
-		bool operator == ( const Player& op ) const;
-		bool operator != ( const Player& op ) const;
-		operator bool();
-		operator uint8_t();
-
-		const std::string& GetName() const;
-
-		static const Player player1;
-		static const Player player2;
-		static const Player player3;
-		static const Player player4;
-		static const Player none;
-};
-
 class CardSet;
 
 class Suit {

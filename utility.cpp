@@ -53,66 +53,6 @@ const Score Score::lowest = Score(0);
 const Score Score::highest = Score(240);
 const Score Score::half = Score(120);
 
-///////////////////////////////////////////////////
-// Player class
-//
-
-Player::Player(): player(4) {
-}
-
-const std::string Player::names[5] = {
-	"Player 1", "Player 2", "Player 3", "Player 4", "No Player"
-};
-
-Player::Player( uint8_t init ): player(init % 4) {
-}
-
-Player& Player::operator ++() {
-	++player %= 4;
-	return *this;
-}
-
-Player& Player::operator --() {
-	--player %= 4;
-	return *this;
-}
-
-void Player::operator += ( const uint8_t op ) {
-	player += op;
-	player %= 4;
-}
-
-void Player::operator -= ( const uint8_t op ) {
-	player -= op;
-	player %= 4;
-}
-
-bool Player::operator == ( const Player& op ) const {
-	return player == op.player;
-}
-
-bool Player::operator != ( const Player& op ) const {
-	return player != op.player;
-}
-
-Player::operator bool() {
-	return player < 4;
-}
-
-Player::operator uint8_t() {
-	return player % 4;
-}
-
-const std::string& Player::GetName() const {
-	return names[player];
-}
-
-const Player Player::player1 = Player(0);
-const Player Player::player2 = Player(1);
-const Player Player::player3 = Player(2);
-const Player Player::player4 = Player(3);
-const Player Player::none = Player();
-
 //////////////////////////////////////////////
 // Suit
 //
