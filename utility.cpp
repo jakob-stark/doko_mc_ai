@@ -2,57 +2,6 @@
 
 #include <iostream>
 
-//////////////////////////////////////////////////
-// Score class
-//
-
-Score::Score( uint8_t init ): score( init ) {
-}
-
-void Score::operator += ( const uint8_t op ) {
-	score += op;
-}
-
-void Score::operator -= ( const uint8_t op ) {
-	score -= op;
-}
-
-void Score::operator += ( const Score& op ) {
-	score += op.score;
-}
-
-void Score::operator -= ( const Score& op ) {
-	score -= op.score;
-}
-
-bool Score::operator == ( const Score& op ) const {
-	return this->score == op.score;
-}
-
-bool Score::operator != ( const Score& op ) const {
-	return this->score != op.score;
-}
-
-bool Score::operator >= ( const Score& op ) const {
-	return this->score >= op.score;
-}
-
-bool Score::operator <= ( const Score& op ) const {
-	return this->score <= op.score;
-}
-
-bool Score::operator > ( const Score& op ) const {
-	return this->score > op.score;
-}
-
-bool Score::operator < ( const Score& op ) const {
-	return this->score < op.score;
-}
-
-const Score Score::lowest = Score(0);
-const Score Score::highest = Score(240);
-const Score Score::half = Score(120);
-
 //////////////////////////////////////////////
 // Suit
 //
@@ -347,6 +296,12 @@ const CardSet CardSet::empty =      CardSet( 0b000000000000000000000000000000000
 const CardSet CardSet::all =        CardSet( 0b111111111111111111111111111111111111111111111111ul );
 const CardSet CardSet::low_block  = CardSet( 0b000000000000000000000000111111111111111111111111ul );
 const CardSet CardSet::high_block = CardSet( 0b111111111111111111111111000000000000000000000000ul );
+
+//////////////////////////////////////////////////////
+// Player
+//
+
+
 
 ///////////////////////////////////////////////////////
 // Trick

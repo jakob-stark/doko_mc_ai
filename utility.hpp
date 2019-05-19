@@ -5,35 +5,7 @@
 #include <cstdint>
 #include <string>
 
-class RuleSet {
-	private:
-		const uint8_t ruleset;
-		RuleSet( const uint8_t init );
-	public:
-		static const RuleSet standard;
-};
-
-class Score {
-	private:
-		uint8_t score;
-	public:
-		Score( uint8_t init );
-		void Reset();
-		void operator += ( const uint8_t op );
-		void operator -= ( const uint8_t op );
-		void operator += ( const Score& op );
-		void operator -= ( const Score& op );
-		bool operator == ( const Score& op ) const;
-		bool operator != ( const Score& op ) const;
-		bool operator <= ( const Score& op ) const;
-		bool operator >= ( const Score& op ) const;
-		bool operator < ( const Score& op ) const;
-		bool operator > ( const Score& op ) const;
-		
-		static const Score lowest;
-		static const Score highest;
-		static const Score half;
-};
+typedef uint8_t Score;
 
 class CardSet;
 
@@ -138,8 +110,6 @@ class Card {
 
 };
 
-class Trick;
-
 class CardSet {
 	private:
 		uint64_t cardset;
@@ -169,6 +139,26 @@ class CardSet {
 		static const CardSet low_block;
 		static const CardSet high_block;
 };
+
+class Player {
+	private:
+		CardSet cardset;
+		Score score;
+		bool is_re;
+		Player* next;
+	public:
+		Player( const CardSet& cardset_init, const Score& score_init=0, Player* next_init=nullptr );
+		CardSet GetLegalCards( const Suit& tricksuit ) const;
+		void Play( const Card& card );
+
+		Player& GetNext() const;
+		void SetNext( Player& op );
+
+		void AddToScore( const Score& op );
+		const Score& GetScore() const;
+};
+
+
 
 /*
 class RandomGame: {
