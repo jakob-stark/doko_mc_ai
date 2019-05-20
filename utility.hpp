@@ -40,6 +40,7 @@ class Card {
 		static const Score values[48];
 
 	public:
+		Card();
 		Card( uint8_t init );
 		Card( std::string name );
 
@@ -48,8 +49,8 @@ class Card {
 		bool IsNone() const;
 		const Suit& GetSuit() const;
 
-		bool operator == ( Card& op ) const;
-		bool operator != ( Card& op ) const;
+		bool operator == ( const Card& op ) const;
+		bool operator != ( const Card& op ) const;
 
 		Card LowBlock() const;
 		Card HighBlock() const;

@@ -91,6 +91,9 @@ const std::string Card::names[48] = {
 	"diamond queen", "heart queen", "spade queen", "club queen", "heart ten"
 };
 
+Card::Card(): card(255) {
+}
+
 Card::Card( uint8_t init ): card(init) {
 }
 
@@ -153,11 +156,11 @@ const Suit& Card::GetSuit() const {
 	return suits[card];
 }
 
-bool Card::operator == ( Card& op ) const {
+bool Card::operator == ( const Card& op ) const {
 	return card == op.card;
 }
 
-bool Card::operator != ( Card& op ) const {
+bool Card::operator != ( const Card& op ) const {
 	return card != op.card;
 }
 
@@ -296,7 +299,7 @@ uint8_t CardSet::GetList( CardList& list ) const {
 	uint8_t len = 0;
 	for ( uint8_t pos = 0; pos < 48; ++pos ) {
 		if ( Have(Card(pos)) ) {
-			list[len++] = pos;
+			list[len++] = Card(pos);
 		}
 	}
 	return len;
