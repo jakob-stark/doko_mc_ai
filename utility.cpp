@@ -292,16 +292,85 @@ uint64_t CardSet::GetSet() const {
 	return cardset;
 }
 
+uint8_t CardSet::GetList( CardList& list ) const {
+	uint8_t len = 0;
+	for ( uint8_t pos = 0; pos < 48; ++pos ) {
+		if ( Have(Card(pos)) ) {
+			list[len++] = pos;
+		}
+	}
+	return len;
+}
+
 const CardSet CardSet::empty =      CardSet( 0b000000000000000000000000000000000000000000000000ul );
 const CardSet CardSet::all =        CardSet( 0b111111111111111111111111111111111111111111111111ul );
 const CardSet CardSet::low_block  = CardSet( 0b000000000000000000000000111111111111111111111111ul );
 const CardSet CardSet::high_block = CardSet( 0b111111111111111111111111000000000000000000000000ul );
 
 //////////////////////////////////////////////////////
+// CardSetIt
+//
+
+CardSetIt::CardSetIt( const CardSet& init ): cardset(init), pos(0xff) {
+	Increase();
+}
+
+void CardSetIt::Increase() {
+	++pos;
+	while ( !cardset.Have(Card(pos)) && pos < 48 ) {
+		++pos;
+	}
+}
+
+bool CardSetIt::GoOn() {
+	return pos < 48;
+}
+
+Card CardSetIt::GetCard() {
+	return Card(pos);
+}
+
+//////////////////////////////////////////////////////
 // Player
 //
 
+Player::Player( const CardSet& cardset_init, const Score& score_init, Player* next_init ):
+		cardset(cardset_init),
+		score(score_init),
+		next(next_init),
+		is_re( cardset_init.CompressLow().Have( Card::club_queen ) ) {
+}
 
+CardSet Player::GetLegalCards( const Suit& tricksuit ) const {
+	if ( cardset.Have( tricksuit ) ) {
+		return cardset.MaskSuit( tricksuit );
+	}
+	return cardset;
+}
+
+void Player::Play( const Card& card ) {
+	cardset.Remove(card);
+}
+
+Player* Player::GetNext() const {
+	return next;
+}
+
+void Player::SetNext( Player* op ) {
+	next = op;
+}
+
+void Player::AddToScore( const Score& op ) {
+	score += op;
+}
+
+const Score& Player::GetScore() const {
+	return score;
+}
+
+bool Player::IsRe() const {
+	return is_re;
+}
 
 ///////////////////////////////////////////////////////
 // Trick

@@ -110,6 +110,8 @@ class Card {
 
 };
 
+typedef Card CardList[48];
+
 class CardSet {
 	private:
 		uint64_t cardset;
@@ -132,6 +134,7 @@ class CardSet {
 		CardSet MaskSuitAndTrump( const Suit& op ) const;
 
 		uint64_t GetSet() const;
+		uint8_t GetList( CardList& list) const;
 		std::string GetInfo() const;
 
 		static const CardSet empty;
@@ -140,22 +143,35 @@ class CardSet {
 		static const CardSet high_block;
 };
 
+class CardSetIt {
+	private:
+		const CardSet cardset;
+		uint8_t pos;
+	public:
+		CardSetIt( const CardSet& init );
+		bool GoOn();
+		void Increase();
+		Card GetCard();
+};
+
 class Player {
 	private:
 		CardSet cardset;
-		Score score;
-		bool is_re;
 		Player* next;
+		Score score;
+		const bool is_re;
 	public:
 		Player( const CardSet& cardset_init, const Score& score_init=0, Player* next_init=nullptr );
 		CardSet GetLegalCards( const Suit& tricksuit ) const;
 		void Play( const Card& card );
 
-		Player& GetNext() const;
-		void SetNext( Player& op );
+		Player* GetNext() const;
+		void SetNext( Player* op );
 
 		void AddToScore( const Score& op );
 		const Score& GetScore() const;
+
+		bool IsRe() const;
 };
 
 
