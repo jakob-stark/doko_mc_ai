@@ -91,6 +91,13 @@ const std::string Card::names[48] = {
 	"diamond queen", "heart queen", "spade queen", "club queen", "heart ten"
 };
 
+const std::string Card::short_names[48] = {
+	"cn", "ck", "ct", "ca", "sn", "sk", "st", "sa", "hn", "hk", "ha", "dn", "dk", "dt", "da",
+	"dj", "hj", "sj", "cj", "dq", "hq", "cq", "ht",
+	"cn", "ck", "ct", "ca", "sn", "sk", "st", "sa", "hn", "hk", "ha", "dn", "dk", "dt", "da",
+	"dj", "hj", "sj", "cj", "dq", "hq", "cq", "ht"
+};
+
 Card::Card(): card(255) {
 }
 
@@ -178,6 +185,10 @@ uint8_t Card::GetIndex() const {
 
 const std::string& Card::GetName() const {
 	return names[card];
+}
+
+const std::string& Card::GetShortName() const {
+	return short_names[card];
 }
 
 const Score& Card::GetValue() const {
@@ -337,11 +348,14 @@ Card CardSetIt::GetCard() {
 // Player
 //
 
-Player::Player( const CardSet& cardset_init, const Score& score_init, Player* next_init ):
+Player::Player( const std::string& name_init, const CardSet& cardset_init, const Score& score_init,
+				Player* next_init, const bool& is_human_init ):
+		name(name_init),
 		cardset(cardset_init),
 		score(score_init),
 		next(next_init),
-		is_re( cardset_init.CompressLow().Have( Card::club_queen ) ) {
+		is_human(is_human_init),
+		is_re(false) {
 }
 
 CardSet Player::GetLegalCards( const Suit& tricksuit ) const {
@@ -353,6 +367,9 @@ CardSet Player::GetLegalCards( const Suit& tricksuit ) const {
 
 void Player::Play( const Card& card ) {
 	cardset.Remove(card);
+	if ( card.LowBlock() == Card::club_queen ) {
+		is_re = true;
+	}
 }
 
 Player* Player::GetNext() const {
@@ -373,6 +390,14 @@ const Score& Player::GetScore() const {
 
 bool Player::IsRe() const {
 	return is_re;
+}
+
+bool Player::IsHuman() const {
+	return is_human;
+}
+
+const std::string& Player::GetName() const {
+	return name;
 }
 
 ///////////////////////////////////////////////////////

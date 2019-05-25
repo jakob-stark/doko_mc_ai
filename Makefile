@@ -1,4 +1,4 @@
-main: main.o utility.o random.o
+main: main.o utility.o game.o
 	g++ -o $@ $^
 
 main.o: main.cpp utility.hpp
@@ -7,5 +7,5 @@ main.o: main.cpp utility.hpp
 utility.o: utility.cpp utility.hpp
 	g++ -c -o $@ $<
 
-random.o: random.cpp utility.hpp random.hpp
+game.o: game.cpp utility.hpp game.hpp
 	g++ -c -o $@ $<

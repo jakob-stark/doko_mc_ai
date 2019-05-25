@@ -37,6 +37,7 @@ class Card {
 
 		static const Suit suits[48];
 		static const std::string names[48];
+		static const std::string short_names[48];
 		static const Score values[48];
 
 	public:
@@ -57,6 +58,7 @@ class Card {
 
 		uint8_t GetIndex() const;
 		const std::string& GetName() const;
+		const std::string& GetShortName() const;
 		const Score& GetValue() const;
 
 		static const Card none;
@@ -160,9 +162,13 @@ class Player {
 		CardSet cardset;
 		Player* next;
 		Score score;
-		const bool is_re;
+		bool is_re;
+		bool is_human;
+		const std::string name;
 	public:
-		Player( const CardSet& cardset_init, const Score& score_init=0, Player* next_init=nullptr );
+		Player( const std::string& name_init, const CardSet& cardset_init=CardSet(0ul),
+				const Score& score_init=0, Player* next_init=nullptr,
+				const bool& is_human_init=false );
 		CardSet GetLegalCards( const Suit& tricksuit ) const;
 		void Play( const Card& card );
 
@@ -173,76 +179,9 @@ class Player {
 		const Score& GetScore() const;
 
 		bool IsRe() const;
+		bool IsHuman() const;
+
+		const std::string& GetName() const;
 };
-
-
-
-/*
-class RandomGame: {
-	public:
-		RandomGame( uint8_t cards_left, CardSet Trick, CardSet Players[4], Player Next, Player Winner )
-
-
-// stores trick information in the upper bits of set
-class Trick: public CardSet {
-  public:
-	Trick();
-	Trick( card init );
-
-
-	//uint8_t GetCount();
-	score GetScore();
-	player GetNext();
-	player GetWinner();
-	void SetNext(player p);
-	void SetWinner(player p);
-	void SetWinnerToNext();
-
-	suit GetTrickSuit();
-
-	bool IsHigher( card c );
-
-	//bool IsFull();
-
-	void Empty();
-	
-	void Play(card_i e);	//track counter and specify winner
-
-
-	//the following functions are not fast enought for tree search only use them rarely
-	
-	void PrintInfo();
-};
-
-struct Game {
-	Game();
-
-	Trick trick;
-	CardSet player_sets[4];
-	score player_scores[4];
-	
-	uint8_t count;
-	void Play(card_i i);
-
-//	uint32_t zorbrist;
-//	uint32_t zor_random[4][48];
-
-	void PrintInfo();
-
-	static Game TestGame( int test);
-};
-
-struct Game2 {
-	Game2();
-	Game2(Game game);
-	Trick trick;
-	CardSet player_sets[4];
-	uint8_t count;
-	void Play(card_i i);
-
-	void PrintInfo();
-};
-
-*/
 
 #endif
