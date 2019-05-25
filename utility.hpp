@@ -160,20 +160,17 @@ class CardSetIt {
 class Player {
 	private:
 		CardSet cardset;
-		Player* next;
 		Score score;
 		bool is_re;
 		bool is_human;
 		const std::string name;
 	public:
 		Player( const std::string& name_init, const CardSet& cardset_init=CardSet(0ul),
-				const Score& score_init=0, Player* next_init=nullptr,
+				const Score& score_init=0,
 				const bool& is_human_init=false );
+		bool Have( const Card& card) const;
 		CardSet GetLegalCards( const Suit& tricksuit ) const;
 		void Play( const Card& card );
-
-		Player* GetNext() const;
-		void SetNext( Player* op );
 
 		void AddToScore( const Score& op );
 		const Score& GetScore() const;
@@ -183,5 +180,7 @@ class Player {
 
 		const std::string& GetName() const;
 };
+
+typedef Player PlayerArray[4];
 
 #endif

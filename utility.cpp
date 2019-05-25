@@ -93,9 +93,9 @@ const std::string Card::names[48] = {
 
 const std::string Card::short_names[48] = {
 	"cn", "ck", "ct", "ca", "sn", "sk", "st", "sa", "hn", "hk", "ha", "dn", "dk", "dt", "da",
-	"dj", "hj", "sj", "cj", "dq", "hq", "cq", "ht",
+	"dj", "hj", "sj", "cj", "dq", "hq", "sq", "cq", "ht",
 	"cn", "ck", "ct", "ca", "sn", "sk", "st", "sa", "hn", "hk", "ha", "dn", "dk", "dt", "da",
-	"dj", "hj", "sj", "cj", "dq", "hq", "cq", "ht"
+	"dj", "hj", "sj", "cj", "dq", "hq", "sq", "cq", "ht"
 };
 
 Card::Card(): card(255) {
@@ -349,13 +349,16 @@ Card CardSetIt::GetCard() {
 //
 
 Player::Player( const std::string& name_init, const CardSet& cardset_init, const Score& score_init,
-				Player* next_init, const bool& is_human_init ):
+				const bool& is_human_init ):
 		name(name_init),
 		cardset(cardset_init),
 		score(score_init),
-		next(next_init),
 		is_human(is_human_init),
 		is_re(false) {
+}
+
+bool Player::Have( const Card& card ) const {
+	return cardset.Have(card);
 }
 
 CardSet Player::GetLegalCards( const Suit& tricksuit ) const {
@@ -370,14 +373,6 @@ void Player::Play( const Card& card ) {
 	if ( card.LowBlock() == Card::club_queen ) {
 		is_re = true;
 	}
-}
-
-Player* Player::GetNext() const {
-	return next;
-}
-
-void Player::SetNext( Player* op ) {
-	next = op;
 }
 
 void Player::AddToScore( const Score& op ) {
@@ -399,172 +394,4 @@ bool Player::IsHuman() const {
 const std::string& Player::GetName() const {
 	return name;
 }
-
-///////////////////////////////////////////////////////
-// Trick
-//
-/*
-Score Trick::Play( const Card& c ) {
-	if ( suit == Suit::none ) {
-		suit = c.GetSuit();
-	}
-
-	if ( (1ul << c.LowBlock.GetIndex()) > cardset.MaskSuitAndTrump(suit).CompressLow()
-			|| (cards_left > 4 && c.LowBlock == Card::heart_ten) ) {
-		winner = next;
-	}
-
-	// Next player is next player ;)
-	++next;
-	// Add card to cardset
-	cardset.Add(c);
-	--cards_left;
-	// Increase Score
-	score += c.GetValue();
-
-	// Round ready?
-	Score result(0);
-	if ( cards_left % 4 == 0 ) {
-		next = winner;
-		cardset.Reset();
-		result += score;
-		score.Reset();
-		suit = Suit::none;
-	}
-
-	return result;
-}
-*/
-/*
-
-
-
-
-Game2::Game2() {};
-
-Game2::Game2( Game game ) {
-	trick = game.trick;
-	for ( uint8_t i = 0; i < 4; i++ )
-		player_sets[i] = game.player_sets[i];
-	count = game.count;
-}
-
-void Game2::Play(card_i e ) {
-	player_sets[trick.GetNext()].Remove(CARD(e));
-	trick.Play(e);
-	count--;
-}
-
-void Game2::PrintInfo() {
-	using namespace std;
-
-	for ( player p = 0; p < 4; p++ ) {
-		cout << "Player " << (int)p << " :" << endl;
-		for ( card_i e = 0; e < 48; e++ )
-			if ( player_sets[p].Contains(CARD(e)) )
-				cout << " - " << CardSet::names[e] << endl;
-	}
-
-	trick.PrintInfo();
-}
-
-
-Game::Game() {
-	count = 0;
-	for ( uint8_t i = 0; i < 4; i++ ) {
-		player_scores[i] = 0;
-		player_sets[i] = 0;
-	}
-}
-
-void Game::Play(card_i e) {
-	player_sets[trick.GetNext()].Remove(CARD(e));
-	trick.Play(e);
-	count--;
-
-	if ( count % 4 == 0 ) {
-		player_scores[trick.GetWinner()] += trick.GetScore();
-		trick.SetWinnerToNext();
-		trick.Empty();
-	}
-}
-
-void Game::PrintInfo() {
-	using namespace std;
-
-	for ( player p = 0; p < 4; p++ ) {
-		cout << "Player " << (int)p << " :" << endl;
-		for ( card_i e = 0; e < 24; e++ ) {
-			if ( player_sets[p].Contains(CARD(e)) )
-				cout << " - " << CardSet::names[e] << endl;
-			if ( player_sets[p].Contains(CARD(e+24)) )
-				cout << " - " << CardSet::names[e] << endl;
-		}
-		cout << "Score : " << (int)player_scores[p] << endl << endl;
-	}
-
-	trick.PrintInfo();
-}
-
-Game Game::TestGame(int test) {
-	Game result;
-
-	if ( test == 1 ) {
-		CardSet hands[4] =  {
-		{ DIAMOND_ACE | CLUB_ACE | CLUB_KING | SPADE_NINE | CLUB_JACK | HEART_NINE |
-		  HEART_JACK | DIAMOND_JACK | HEART_TEN | CLUB_QUEEN |
-		  CLUB_NINE | CLUB_KING_H },
-		{ DIAMOND_QUEEN | DIAMOND_KING | CLUB_QUEEN_H | SPADE_KING | CLUB_TEN |
-		  HEART_KING | HEART_KING_H | SPADE_QUEEN | CLUB_NINE_H | SPADE_TEN |
-		  DIAMOND_KING_H | DIAMOND_JACK_H },
-		{ SPADE_TEN_H | HEART_NINE_H | HEART_JACK_H | CLUB_JACK_H | SPADE_JACK |
-		  HEART_QUEEN | SPADE_ACE | SPADE_QUEEN_H | SPADE_JACK_H | SPADE_ACE_H |
-		  DIAMOND_NINE | HEART_TEN_H },
-		{ HEART_QUEEN_H | HEART_ACE | DIAMOND_ACE_H | SPADE_NINE_H | CLUB_TEN_H |
-		  SPADE_KING_H | DIAMOND_NINE_H | DIAMOND_TEN | DIAMOND_TEN_H | HEART_ACE_H |
-		  CLUB_ACE_H | DIAMOND_QUEEN_H }
-		};
-		for ( int i = 0; i < 4; i++ )
-			result.player_sets[i] = hands[i];
-		result.count = 48;
-	} else if ( test == 2 ) {
-		CardSet hands[4] = {
-			{ DIAMOND_ACE | CLUB_ACE | CLUB_KING | SPADE_NINE | CLUB_JACK },
-			{ DIAMOND_QUEEN | DIAMOND_KING |CLUB_QUEEN_H | SPADE_KING | CLUB_TEN },
-			{ HEART_TEN_H | HEART_NINE_H | HEART_JACK_H | CLUB_JACK_H | SPADE_JACK },
-			{ HEART_QUEEN_H | HEART_ACE | DIAMOND_ACE_H | SPADE_NINE_H | CLUB_TEN_H } };
-		for ( int i = 0; i < 4; i++ )
-			result.player_sets[i] = hands[i];
-		result.count = 20;
-	} else if ( test == 3) {
-		CardSet hands[4] =  {
-		{ DIAMOND_ACE | CLUB_ACE | CLUB_KING | SPADE_NINE | CLUB_JACK | HEART_NINE |
-		  HEART_JACK | DIAMOND_JACK | HEART_TEN | CLUB_QUEEN },
-		{ DIAMOND_QUEEN | DIAMOND_KING | CLUB_QUEEN_H | SPADE_KING | CLUB_TEN |
-		  HEART_KING | HEART_KING_H | SPADE_QUEEN | CLUB_NINE_H | SPADE_TEN },
-		{ SPADE_TEN_H | HEART_NINE_H | HEART_JACK_H | CLUB_JACK_H | SPADE_JACK |
-		  HEART_QUEEN | SPADE_ACE | SPADE_QUEEN_H | SPADE_JACK_H | SPADE_ACE_H },
-		{ HEART_QUEEN_H | HEART_ACE | DIAMOND_ACE_H | SPADE_NINE | CLUB_TEN_H |
-		  SPADE_KING_H | DIAMOND_NINE_H | DIAMOND_TEN | DIAMOND_TEN_H | HEART_ACE_H }
-		};
-		for ( int i = 0; i < 4; i++ )
-			result.player_sets[i] = hands[i];
-		result.count = 40;
-	} else if ( test == 4 ) {
-		CardSet hands[4] = {
-			{ SPADE_NINE | CLUB_JACK },
-			{ DIAMOND_QUEEN | CLUB_QUEEN },
-			{ HEART_JACK | HEART_TEN },
-			{ DIAMOND_ACE | SPADE_NINE_H } };
-		for ( int i = 0; i < 4; i++ )
-			result.player_sets[i] = hands[i];
-		result.count = 8;
-		result.trick.SetNext(3);
-		result.trick.SetWinner(3);
-	}
-	for ( int i = 0; i<4; i++ )
-		result.player_scores[i] = 0;
-	return result;
-};
-*/
 

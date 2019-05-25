@@ -15,18 +15,21 @@ class RandomGenerator {
 
 class GameInfo{
 	public:
-		Player* next;
+		PlayerArray players;
+		uint8_t next;
 		uint8_t cards_left;
 		Score trickscore;
 		Suit tricksuit;
 		Card trickwinnercard;
-		Player* trickwinner;
+		uint8_t trickwinner;
 
-		GameInfo(Player* init_beginner, uint8_t init_cards_left, Score init_trickscore,
-				Suit init_tricksuit, Card init_trickwinnercard, Player* init_trickwinner);
+		GameInfo(const PlayerArray& init_players, uint8_t init_next, uint8_t init_cards_left,
+				Score init_trickscore, Suit init_tricksuit, Card init_trickwinnercard,
+				uint8_t init_trickwinner);
 		
 #ifdef TEST_GAMES
 		static GameInfo test_game1;
+		static GameInfo test_game2;
 #endif
 };
 
