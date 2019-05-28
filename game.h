@@ -22,14 +22,12 @@ typedef uint8_t CardId;
 typedef uint8_t PlayerId;
 typedef uint64_t CardSet;
 
-#define RE 0x0080000000000000ul
-#define GET_RE(cardset) ((cardset) & RE)
-#define SET_RE(cardset) ((cardset) &= ~RE)
-#define UNSET_RE(cardset) ((cardset) |= RE)
+typedef uint8_t Bool;
 
 typedef struct {
 	CardSet  player_cardsets[4];
 	Score    player_scores[4];
+	Bool	 player_isre[4];
 	uint8_t  cards_left;
 
 	PlayerId next;
@@ -40,8 +38,14 @@ typedef struct {
 	PlayerId trickwinner;
 } GameInfo;
 
-//extern const Score card_values[24];
-//extern const Score card_suits[24];
+typedef struct {
+	uint8_t cards_left;
+	float scores[3][36];
+	CardId ids[36];
+	float metric_sum[3];
+} CardInfo;
+
+void MCSample( GameInfo* dest, CardInfo* card_info );	
 
 #endif
 

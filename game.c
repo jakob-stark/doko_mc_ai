@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <string.h>
 #include "game.h"
 
 static const Score card_values[24] = {
@@ -94,10 +95,81 @@ Score Simulate( GameInfo* game_info ) {
 	PlayerId p;
 	Score result = 0;
 	for ( p = 0; p < 4; p++ ) {
-		if ( GET_RE(game_info->player_cardsets[p]) ) {
+		if ( game_info->player_isre[p] ) {
 			result += game_info->player_scores[p];
 		}
 	}
 	return result;
 }
+
+float Metric(float x) {
+	return x;
+//	return 6*x*(1-x);
+}
+
+float Random() {
+	static union {
+		uint32_t i;
+		float f;
+	} u;
+	u.i = rand() & 0x007fffff | 0x3f800000;
+	return u.f-1.0;
+}
+
+void MCSample( GameInfo* dest, CardInfo* card_info ) {
+	/* sample the cards */
+	CardId c;
+	int8_t i;
+	PlayerId p;
+	float r;
+	float m_sum[3];
+	while ( card_info->cards_left > 0 ) {
+		c = --(card_info->cards_left);
+		r = Random() * (card_info->scores[0][c] + card_info->scores[1][c] + card_info->scores[2][c]);
+		if ( r < card_info->scores[0][c] ) {
+			p = 0;
+		} else if ( r < card_info->scores[0][c] + card_info->scores[1][c] ) {
+			p = 1;
+		} else {
+			p = 2;
+		}
+		
+		/* norm scores */
+		m_sum[p] = card_info->metric_sum[p] - Metric( card_info->scores[p][c] );
+		if ( m_sum[p] != 0 ) {
+			card_info->metric_sum[p] = 0;
+			for ( i = c - 1; i >= 0; i-- ) {
+				card_info->scores[p][i] -= (1.0-card_info->scores[p][c]) * Metric( card_info->scores[p][i] )
+												/ m_sum[p];
+				card_info->metric_sum[p] += Metric( card_info->scores[p][i] );
+			}
+		}
+		p = (p+1)%3;
+		m_sum[p] = card_info->metric_sum[p] - Metric( card_info->scores[p][c] );
+		if ( m_sum[p] != 0 ) {
+			card_info->metric_sum[p] = 0;
+			for ( i = c - 1; i >= 0; i-- ) {
+				card_info->scores[p][i] += card_info->scores[p][c] * Metric( card_info->scores[p][i] )
+												/ m_sum[p];
+				card_info->metric_sum[p] += Metric( card_info->scores[p][i] );
+			}
+		}
+		p = (p+1)%3;
+		m_sum[p] = card_info->metric_sum[p] - Metric( card_info->scores[p][c] );
+		if ( m_sum[p] != 0 ) {
+			card_info->metric_sum[p] = 0;
+			for ( i = c - 1; i >= 0; i-- ) {
+				card_info->scores[p][i] += card_info->scores[p][c] * Metric( card_info->scores[p][i] )
+												/ m_sum[p];
+				card_info->metric_sum[p] += Metric( card_info->scores[p][i] );
+			}
+		}
+		p = (p+1)%3;
+
+		/* add card to player */
+		dest->player_cardsets[p+1] += CARDSHIFT(card_info->ids[c]);
+	}
+}
+
+
 
