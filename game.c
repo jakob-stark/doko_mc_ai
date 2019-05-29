@@ -102,11 +102,10 @@ Score Simulate( GameInfo* game_info ) {
 	return result;
 }
 
-float Metric(float x) {
-	return x;
-//	return 6*x*(1-x);
-}
-
+/** @brief Throws random float numbers in [0,1) interval
+ *
+ * @return Random number (float) in [0,1) interval
+ */
 float Random() {
 	static union {
 		uint32_t i;
@@ -116,6 +115,16 @@ float Random() {
 	return u.f-1.0;
 }
 
+/** @brief Samples card distribution
+ *
+ *  This function samples a card distribution according to the information given in card_info.
+ *  It does'n preserve dest nor card_info, so make sure to copy them.
+ *
+ *  @param dest Destination GameInfo object. Will only add cards to the cardsets of players 1-3. So
+ *  			this can be used with an initialized GameInfo object where the remaining card will be
+ *  			filed in.
+ *  @param card_info Information about which cards are to be dealed and with which scores.
+ */
 void MCSample( GameInfo* dest, CardInfo* card_info ) {
 	/* sample the cards */
 	CardId c;
@@ -135,33 +144,33 @@ void MCSample( GameInfo* dest, CardInfo* card_info ) {
 		}
 		
 		/* norm scores */
-		m_sum[p] = card_info->metric_sum[p] - Metric( card_info->scores[p][c] );
+		m_sum[p] = card_info->metric_sum[p] - card_info->scores[p][c];
 		if ( m_sum[p] != 0 ) {
 			card_info->metric_sum[p] = 0;
 			for ( i = c - 1; i >= 0; i-- ) {
-				card_info->scores[p][i] -= (1.0-card_info->scores[p][c]) * Metric( card_info->scores[p][i] )
+				card_info->scores[p][i] -= (1.0-card_info->scores[p][c]) * card_info->scores[p][i]
 												/ m_sum[p];
-				card_info->metric_sum[p] += Metric( card_info->scores[p][i] );
+				card_info->metric_sum[p] += card_info->scores[p][i];
 			}
 		}
 		p = (p+1)%3;
-		m_sum[p] = card_info->metric_sum[p] - Metric( card_info->scores[p][c] );
+		m_sum[p] = card_info->metric_sum[p] - card_info->scores[p][c];
 		if ( m_sum[p] != 0 ) {
 			card_info->metric_sum[p] = 0;
 			for ( i = c - 1; i >= 0; i-- ) {
-				card_info->scores[p][i] += card_info->scores[p][c] * Metric( card_info->scores[p][i] )
+				card_info->scores[p][i] += card_info->scores[p][c] * card_info->scores[p][i]
 												/ m_sum[p];
-				card_info->metric_sum[p] += Metric( card_info->scores[p][i] );
+				card_info->metric_sum[p] += card_info->scores[p][i];
 			}
 		}
 		p = (p+1)%3;
-		m_sum[p] = card_info->metric_sum[p] - Metric( card_info->scores[p][c] );
+		m_sum[p] = card_info->metric_sum[p] - card_info->scores[p][c];
 		if ( m_sum[p] != 0 ) {
 			card_info->metric_sum[p] = 0;
 			for ( i = c - 1; i >= 0; i-- ) {
-				card_info->scores[p][i] += card_info->scores[p][c] * Metric( card_info->scores[p][i] )
+				card_info->scores[p][i] += card_info->scores[p][c] * card_info->scores[p][i]
 												/ m_sum[p];
-				card_info->metric_sum[p] += Metric( card_info->scores[p][i] );
+				card_info->metric_sum[p] += card_info->scores[p][i];
 			}
 		}
 		p = (p+1)%3;
