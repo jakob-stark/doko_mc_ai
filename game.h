@@ -42,10 +42,12 @@ typedef struct {
 	uint8_t cards_left;
 	float scores[3][36];
 	CardId ids[36];
-	float metric_sum[3];
+	float sum[3];
+	uint8_t one;
 } CardInfo;
 
 void MCSample( GameInfo* dest, CardInfo* card_info );	
+void Prepare( GameInfo* game_info, CardInfo* card_info );
 
 #endif
 

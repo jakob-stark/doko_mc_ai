@@ -1,5 +1,7 @@
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
+#include <stdbool.h>
 #include "game.h"
 
 static const Score card_values[24] = {
@@ -102,7 +104,7 @@ Score Simulate( GameInfo* game_info ) {
 	return result;
 }
 
-/** @brief Throws random float numbers in [0,1) interval
+/** @brief Samples random float numbers in [0,1) interval
  *
  * @return Random number (float) in [0,1) interval
  */
@@ -131,7 +133,6 @@ void MCSample( GameInfo* dest, CardInfo* card_info ) {
 	int8_t i;
 	PlayerId p;
 	float r;
-	float m_sum[3];
 	while ( card_info->cards_left > 0 ) {
 		c = --(card_info->cards_left);
 		r = Random() * (card_info->scores[0][c] + card_info->scores[1][c] + card_info->scores[2][c]);
@@ -144,41 +145,122 @@ void MCSample( GameInfo* dest, CardInfo* card_info ) {
 		}
 		
 		/* norm scores */
-		m_sum[p] = card_info->metric_sum[p] - card_info->scores[p][c];
-		if ( m_sum[p] != 0 ) {
-			card_info->metric_sum[p] = 0;
+		if ( card_info->sum[p] > card_info->scores[p][c] ) {
 			for ( i = c - 1; i >= 0; i-- ) {
 				card_info->scores[p][i] -= (1.0-card_info->scores[p][c]) * card_info->scores[p][i]
-												/ m_sum[p];
-				card_info->metric_sum[p] += card_info->scores[p][i];
+												/ (card_info->sum[p] - card_info->scores[p][c]);
+			}
+		}
+		card_info->sum[p] -= 1.0;
+		p = (p+1)%3;
+		if ( card_info->sum[p] > card_info->scores[p][c] ) {
+			for ( i = c - 1; i >= 0; i-- ) {
+				card_info->scores[p][i] += card_info->scores[p][c] * card_info->scores[p][i]
+												/ (card_info->sum[p] - card_info->scores[p][c]);
 			}
 		}
 		p = (p+1)%3;
-		m_sum[p] = card_info->metric_sum[p] - card_info->scores[p][c];
-		if ( m_sum[p] != 0 ) {
-			card_info->metric_sum[p] = 0;
+		if ( card_info->sum[p] > card_info->scores[p][c] ) {
 			for ( i = c - 1; i >= 0; i-- ) {
 				card_info->scores[p][i] += card_info->scores[p][c] * card_info->scores[p][i]
-												/ m_sum[p];
-				card_info->metric_sum[p] += card_info->scores[p][i];
-			}
-		}
-		p = (p+1)%3;
-		m_sum[p] = card_info->metric_sum[p] - card_info->scores[p][c];
-		if ( m_sum[p] != 0 ) {
-			card_info->metric_sum[p] = 0;
-			for ( i = c - 1; i >= 0; i-- ) {
-				card_info->scores[p][i] += card_info->scores[p][c] * card_info->scores[p][i]
-												/ m_sum[p];
-				card_info->metric_sum[p] += card_info->scores[p][i];
+												/ (card_info->sum[p] - card_info->scores[p][c]);
 			}
 		}
 		p = (p+1)%3;
 
 		/* add card to player */
 		dest->player_cardsets[p+1] += CARDSHIFT(card_info->ids[c]);
+		if ( card_info->ids[c] = CLUB_QUEEN ) {
+			dest->player_isre[p+1] = true;
+		}
 	}
 }
 
+void PrintCardInfo( CardInfo* card_info ) {
+	
+}
+
+void Prepare( GameInfo* game_info, CardInfo* card_info ) {
+	/* sort card so that cards with more zero scores appear at the end and will thus selected first */
+
+	/* delete two zero cards and put them into cardsets */
+	int8_t i;
+	PlayerId p;
+	float norms[3] = {0.0, 0.0, 0.0};
+	float tmp;
+
+	for ( i = card_info->cards_left - 1; i >= 0; i-- ) {
+		for ( p = 0; p < 3; p++ ) {
+			if ( card_info->scores[(p+1)%3][i] == 0.0 && card_info->scores[(p+2)%3][i] == 0.0 ) {
+				game_info->player_cardsets[p+1] += CARDSHIFT(card_info->ids[i]);
+				if ( card_info->ids[i] == CLUB_QUEEN ) {
+					game_info->player_isre[p+1] = true;
+				}
+				norms[p] += 1.0-card_info->scores[p][i];
+				card_info->sum[p] -= card_info->scores[p][i];
+
+				memmove( &(card_info->scores[p][i]), &(card_info->scores[p][i+1]),
+						sizeof(float)*(card_info->cards_left - i - 1) );
+				memmove( &(card_info->scores[(p+1)%3][i]), &(card_info->scores[(p+1)%3][i+1]),
+						sizeof(float)*(card_info->cards_left - i - 1) );
+				memmove( &(card_info->scores[(p+2)%3][i]), &(card_info->scores[(p+2)%3][i+1]),
+						sizeof(float)*(card_info->cards_left - i - 1) );
+				memmove( &(card_info->ids[i]), &(card_info->ids[i+1]),
+						sizeof(PlayerId)*(card_info->cards_left - i - 1) );
+
+				(card_info->cards_left)--;
+				if ( i < card_info->one ) {
+					--(card_info->one);
+				}
+				break;
+			}
+		}
+	}
+
+	/* norm remaining cards */
+	for ( p = 0; p < 3; p++ ) {
+		for ( i = card_info->cards_left - 1; i >= 0; i-- ) {
+			card_info->scores[p][i] -= norms[p] * card_info->scores[p][i] / card_info->sum[p];
+		}
+		card_info->sum[p] -= norms[p];
+	}
+
+	/* sort array */
+	for ( i = card_info->one - 1; i >= 0; i-- ) {
+		if ( card_info->scores[0][i] == 0.0 || card_info->scores[1][i] == 0.0 ||
+					card_info->scores[2][i] == 0.0 ) {
+			for ( p = 0; p < 3; p++ ) {
+				tmp = card_info->scores[p][i];
+				memmove( &(card_info->scores[p][i]), &(card_info->scores[p][i+1]), 
+							sizeof(float)*(card_info->one - i - 1) );
+				card_info->scores[p][card_info->one-1] = tmp;
+			}
+			PlayerId tmpid = card_info->ids[i];
+			memmove( &(card_info->ids[i]), &(card_info->ids[i+1]), sizeof(PlayerId)*(card_info->one-i-1));
+			card_info->ids[card_info->one-1] = tmpid;
+			--(card_info->one);
+		}
+	}
+}
+
+
+void Renorm( CardInfo* card_info, PlayerId player, CardId card, float quantity ) {
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
 
 
