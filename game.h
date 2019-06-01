@@ -46,8 +46,12 @@ typedef struct {
 	uint8_t one;
 } CardInfo;
 
+void PlayCard( GameInfo* game_info, CardId card );
+Score Simulate( GameInfo* game_info );
 void MCSample( GameInfo* dest, CardInfo* card_info );	
 void Prepare( GameInfo* game_info, CardInfo* card_info );
+void Renorm( CardInfo* card_info, PlayerId p, CardId c, float quantity );
+CardId GetBestCard( GameInfo* game_info, CardInfo* card_info );
 
 #endif
 

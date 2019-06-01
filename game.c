@@ -2,6 +2,10 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdbool.h>
+
+#include <pthread.h>
+#include <sys/sysinfo.h>
+
 #include "game.h"
 
 static const Score card_values[24] = {
@@ -93,11 +97,11 @@ Score Simulate( GameInfo* game_info ) {
 		/* determine random legal card to play and play it */
 		PlayCard( game_info, legal_cards[rand() % legal_cards_len] );
 	}
-	/* return score for re */
+	/* return score for party of player 0 */
 	PlayerId p;
 	Score result = 0;
 	for ( p = 0; p < 4; p++ ) {
-		if ( game_info->player_isre[p] ) {
+		if ( game_info->player_isre[p] == game_info->player_isre[0] ) {
 			result += game_info->player_scores[p];
 		}
 	}
@@ -108,7 +112,7 @@ Score Simulate( GameInfo* game_info ) {
  *
  * @return Random number (float) in [0,1) interval
  */
-float Random() {
+static float Random() {
 	static union {
 		uint32_t i;
 		float f;
@@ -176,10 +180,18 @@ void MCSample( GameInfo* dest, CardInfo* card_info ) {
 	}
 }
 
-void PrintCardInfo( CardInfo* card_info ) {
-	
-}
-
+/** @brief prepares card_info and game_info for MC sampling
+ *
+ * 		this removes all entries in card_info which contain two zeros and
+ * 		deals them to the corresponding player. Additionally this sorts the
+ * 		entries in such manner that all entries which have one zero appear at
+ * 		the end of the list. This makes MCSample more stable
+ *
+ * 	@param game_info pointer to GameInfo object to operate on. Only cardsets of
+ * 		players will be moified
+ *
+ * 	@param card_info pointer to CardInfo object to operate on.
+ */
 void Prepare( GameInfo* game_info, CardInfo* card_info ) {
 	/* sort card so that cards with more zero scores appear at the end and will thus selected first */
 
@@ -243,24 +255,121 @@ void Prepare( GameInfo* game_info, CardInfo* card_info ) {
 	}
 }
 
-
-void Renorm( CardInfo* card_info, PlayerId player, CardId card, float quantity ) {
+/** @brief Adds quantity to entry in card_info and renorms the other entries.
+ */
+void Renorm( CardInfo* card_info, PlayerId p, CardId c, float quantity ) {
+	int8_t i;
+	for ( i = card_info->cards_left - 1; i >= 0; i-- ) {
+		if ( i == c ) {
+			card_info->scores[p][i] += quantity;
+		} else {
+			card_info->scores[p][i] -= quantity * card_info->scores[p][i]
+											/ ( card_info->sum[p] - card_info->scores[p][c] );
+		}
+	}
 }
 
+typedef struct {
+	const CardId * card_list;
+	uint8_t card_list_len;
+	const GameInfo * game_info_in;
+	const CardInfo * card_info_in;
+	uint32_t result[12];
+} WorkerArg;
 
+void * WorkerRoutine( void * arg ) {
+	uint8_t card_list_i;
+	GameInfo game_info_tmp;
+	GameInfo game_info_tmp2;
+	CardInfo card_info_tmp;
 
+	int i = 0;
+	int j = 0;
+	for ( i = 0; i < 1000; i++ ) {
+		for ( card_list_i = 0; card_list_i < ((WorkerArg*)arg)->card_list_len; card_list_i++ ) {
+			game_info_tmp = *(((WorkerArg*)arg)->game_info_in);
+			card_info_tmp = *(((WorkerArg*)arg)->card_info_in);
+			PlayCard( &game_info_tmp, ((WorkerArg*)arg)->card_list[card_list_i] );
+			MCSample( &game_info_tmp, &card_info_tmp );
+			for ( j = 0; j < 1000; j++ ) {
+				game_info_tmp2 = game_info_tmp;
+				((WorkerArg*)arg)->result[card_list_i] += Simulate( &game_info_tmp2 );
+			}
+		}
+	}
+	return NULL;
+}
 
-
-
-
-
-
-
-
-
-
-
-
+/** @brief gets best card
+ *
+ */
+CardId GetBestCard( GameInfo* game_info, CardInfo* card_info ) {
+	Prepare( game_info, card_info );
 	
+	CardId card_list[12];
+	uint32_t card_scores[12];
+	uint8_t card_list_len = 0;
+	uint8_t card_list_i;
+	/* find list of legal cards */
+	CardId card_id = 0;
+	CardSet card_set;
+	card_set = game_info->player_cardsets[0] & suit_sets[game_info->tricksuit];
+	if ( card_set == 0 ) {
+		card_set = game_info->player_cardsets[0];
+	}
+	while ( card_set != 0 ) {
+		switch ( card_set % 4 ) {
+			case 2:
+				card_list[card_list_len++] = card_id;
+			case 1:
+				card_list[card_list_len++] = card_id;
+		}
+		card_id++;
+		card_set >>= 2;
+	}
+
+	/* start worker threads */
+	pthread_t threads[8];
+	WorkerArg args[8];
+	int n;
+	int N = get_nprocs();
+	if ( N < 1 ) {
+		N = 1;
+	}
+	if ( N > 8 ) {
+		N = 8;
+	}
+	for ( n = 0; n < N; n++ ) {
+		/* initialize args */
+		args[n].card_list = card_list;
+		args[n].card_list_len = card_list_len;
+		args[n].game_info_in = game_info;
+		args[n].card_info_in = card_info;
+		for ( card_list_i = 0; card_list_i < card_list_len; card_list_i++ ) {
+			args[n].result[card_list_i] = 0ul;
+		}
+		pthread_create( &(threads[n]), NULL, &WorkerRoutine, &(args[n]) );
+	}
+	
+	/* join worker threads */
+	for ( n = 0; n < N; n++ ) {
+		pthread_join( threads[n], NULL );
+		for ( card_list_i = 0; card_list_i < card_list_len; card_list_i++ ) {
+		   card_scores[card_list_i] += 	args[n].result[card_list_i];
+		}
+	}
+
+	/* find best card in card list */
+	uint32_t max_score = 0;
+	CardId max_id;
+	for ( card_list_i = 0; card_list_i < card_list_len; card_list_i++ ) {
+		if ( card_scores[card_list_i] > max_score ) {
+			max_score = card_scores[card_list_i];
+			max_id = card_list[card_list_i];
+		}
+	}
+	return max_id;
+}
+
 
 
