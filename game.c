@@ -70,7 +70,7 @@ static uint8_t RandomInt(uint32_t* state, uint8_t a) {
  *  @param card Id of card to play. Will not check for consistency. If the next player
  *  			does not hold this card, the behaviour is undefined.
  */
-void PlayCard( GameInfo* game_info, CardId card ) {
+static void PlayCard( GameInfo* game_info, CardId card ) {
 	/* remove card from players hand */
 	game_info->player_cardsets[game_info->next] -= CARDSHIFT(card);
 	--(game_info->cards_left);
@@ -110,7 +110,7 @@ void PlayCard( GameInfo* game_info, CardId card ) {
  * @param random_state pointer to 32bit random state used by Random and RandomInt
  * @return Score value for player 0
  */
-Score Simulate( GameInfo* game_info, uint32_t* random_state ) {
+static Score Simulate( GameInfo* game_info, uint32_t* random_state ) {
 	CardSet legal_card_set;
 	CardId legal_cards[12];
 	uint8_t legal_cards_len;
@@ -158,7 +158,7 @@ Score Simulate( GameInfo* game_info, uint32_t* random_state ) {
  *  @param card_info Information about which cards are to be dealed and with which scores.
  *  @param random_state pointer to 32bit value used as random state by Random and RandomInt
  */
-void MCSample( GameInfo* dest, CardInfo* card_info, uint32_t* random_state ) {
+static void MCSample( GameInfo* dest, CardInfo* card_info, uint32_t* random_state ) {
 	/* sample the cards */
 	CardId c;
 	int8_t i;
@@ -218,7 +218,7 @@ void MCSample( GameInfo* dest, CardInfo* card_info, uint32_t* random_state ) {
  * 		players will be moified
  * 	@param card_info pointer to CardInfo object to operate on.
  */
-void Prepare( GameInfo* game_info, CardInfo* card_info ) {
+static void Prepare( GameInfo* game_info, CardInfo* card_info ) {
 	/* sort card so that cards with more zero scores appear at the end and will thus selected first */
 
 	/* delete two zero cards and put them into cardsets */
@@ -301,14 +301,12 @@ typedef struct {
 	CardInfo card_info_tmp;
 } WorkerData;
 
-#include "cardinfo.c"
-
 /** @brief this is the worker thread routine
  *
  * 	@param arg pointer to data structure holding all relevant data and return data fields
  * 	@return returns NULL, returned data is in result field of WorkerData struct
  */
-void * WorkerRoutine( WorkerData * arg ) {
+static void * WorkerRoutine( WorkerData * arg ) {
  	#define NSIM 100
 	uint8_t card_list_i;
 	arg->time_goal += clock();
@@ -406,5 +404,100 @@ CardId GetBestCard( GameInfo* game_info, CardInfo* card_info ) {
 	return max_id;
 }
 
+#if 0
+/** @brief Adds quantity to entry in card_info and renorms the other entries.
+ *
+ *  @param card_info pointer to CardInfo object to operate on
+ *  @param player player id. Note this is NOT in CardInfo player numbering scheme
+ *  @param card card to renorm this is normal card id
+ *  @param quantity Value to increase. All entries in card_info that match c will be increased
+ *  			pass negative value to decrease.
+ */
+static void Renorm( CardInfo* card_info, PlayerId player, CardId card, float quantity ) {
+	uint8_t card_i;
 
+	/* search for entries that match card and count them */
+	uint8_t card_num = 0;
+	for ( card_i = 0; card_i < card_info->cards_left; card_i++ ) {
+		if ( card_info->ids[card_i] == card ) {
+			++card_num;
+		}
+	}
+
+	/* renorm with card_num*quantity */
+	for ( card_i = 0; card_i < card_info->cards_left; card_i++ ) {
+		if ( card_info->ids[card_i] == card ) {
+			card_info->scores[p][i] += quantity;
+		} else {
+			card_info->scores[p][i] -= quantity * card_info->scores[p][i]
+											/ ( card_info->sum[p] - card_info->scores[p][c] );
+		}
+	}
+}
+#endif
+
+/** @brief Marks a card for removing into GameInfo.cardset by Prepare.
+ * 			
+ * 		Sets one entry for card to 1.0 for player and 0.0 for the other players.
+ * 		Thus Prepare will remove this entry from the list and add it to the GameInfo cardset member,
+ * 		so that PlayCard may be called upon this card.
+ *
+ * 	@param card_info Pointer to CardInfo object to operate on
+ * 	@param player Player Id. Note this is in Range (0-3) and will be converted into internal
+ *			player id numbering scheme used for CardInfo objects
+ *	@param card Card id
+ */
+static void RemoveToPlay( CardInfo* card_info, PlayerId player, CardId card ) {
+	uint8_t card_i;
+	PlayerId p = player-1;
+	
+	/* search for first occurence of card */
+	uint8_t first_i;
+	for ( card_i = 0; card_i < card_info->cards_left; card_i++ ) {
+		if ( card_info->ids[card_i] == card ) {
+			first_i = card_i;
+			break;
+		}
+	}
+
+	/* renorm other entries */
+	for ( card_i = 0; card_i < card_info->cards_left; card_i++ ) {
+		if ( card_i != first_i ) {
+			card_info->scores[p][card_i] -= (1.0 - card_info->scores[p][first_i]) 
+			   	* card_info->scores[p][card_i] / ( card_info->sum[p] - card_info->scores[p][first_i] );
+			card_info->scores[(p+1)%3][card_i] += card_info->scores[(p+1)%3][first_i]
+			   	* card_info->scores[(p+1)%3][card_i]
+				/ ( card_info->sum[(p+1)%3] - card_info->scores[(p+1)%3][first_i] );
+			card_info->scores[(p+2)%3][card_i] += card_info->scores[(p+2)%3][first_i]
+			   	* card_info->scores[(p+2)%3][card_i] 
+				/ ( card_info->sum[(p+2)%3] - card_info->scores[(p+2)%3][first_i] );
+		}
+	}
+	card_info->scores[ p     ][first_i] = 1.0; 
+	card_info->scores[(p+1)%3][first_i] = 0.0; 
+	card_info->scores[(p+2)%3][first_i] = 0.0; 
+}
+
+/** @brief Execute a move.
+ *
+ * 		This will handle all internal things that happen when someone plays a card. In case the machine
+ * 		itself plays a card, this simply removes it from the cardset[0] and updates the trick and scores.
+ * 		In case of human player this also processes information about the card played, such as for
+ * 		example if the player does not have a specific suit.
+ *
+ * 	@param game_info Pointer to GameInfo object to operate on.
+ * 	@param card_info Pointer to CardInfo object to operate on.
+ * 	@param card Card Id to play. Will not check if player has card.
+ */
+void ExecuteMove( GameInfo* game_info, CardInfo* card_info, CardId card ) {
+	if ( game_info->next == 0 ) {
+		/* perform machine move */
+		PlayCard( game_info, card );
+	} else {
+		/* perform human move */
+		RemoveToPlay( card_info, game_info->next, card );
+		Prepare( game_info, card_info );
+		PlayCard( game_info, card );
+	}
+}
 
