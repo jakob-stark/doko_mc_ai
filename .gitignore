@@ -1,5 +1,6 @@
 main
 doc/
+*.pdf
 *.o
 *.swp
 *.swo
