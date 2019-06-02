@@ -46,11 +46,13 @@ typedef struct {
 	uint8_t one;
 } CardInfo;
 
+extern const char * const card_names[24];
+
 void PlayCard( GameInfo* game_info, CardId card );
-Score Simulate( GameInfo* game_info );
-void MCSample( GameInfo* dest, CardInfo* card_info );	
+Score Simulate( GameInfo* game_info, uint32_t* random_state );
+void MCSample( GameInfo* dest, CardInfo* card_info, uint32_t* random_state );	
 void Prepare( GameInfo* game_info, CardInfo* card_info );
-void Renorm( CardInfo* card_info, PlayerId p, CardId c, float quantity );
+void Zero( CardInfo* card_info, PlayerId p, CardId c );
 CardId GetBestCard( GameInfo* game_info, CardInfo* card_info );
 
 #endif

@@ -8,6 +8,11 @@
 
 #include "game.h"
 
+const char * const card_names[24] = { 
+	"cn", "ck", "ct", "ca", "sn", "sk", "st", "sa", "hn", "hk", "ha",
+	"dn", "dk", "dt", "da", "dj", "hj", "sj", "cj", "dq", "hq", "sq", "cq", "ht"
+};
+
 static const Score card_values[24] = {
 	0, 4, 10, 11, 0, 4, 10, 11, 0, 4, 11, 0, 4, 10, 11,	2, 2, 2, 2, 3, 3, 3, 3, 10
 };
@@ -25,6 +30,39 @@ static const CardSet suit_sets[6] = {
 	0x0000ffffffc00000ul,
 	0x0000fffffffffffful
 };
+
+/** @brief Samples random float numbers in [0,1) interval
+ *
+ * @return Random number (float) in [0,1) interval
+ */
+static float Random(uint32_t* state) {
+	union {
+		uint32_t i;
+		float f;
+	} u;
+	u.i = *state;
+	u.i ^= u.i << 13;
+	u.i ^= u.i >> 17;
+	u.i ^= u.i << 5;
+	*state = u.i;
+	u.i = u.i & 0x007fffff | 0x3f800000;
+	return u.f-1.0;
+}
+
+/** @brief Samples a random integer number in [0,a) interval
+ *
+ * @param a upper edge of sample interval
+ * @return Random integer number between 0 (inclusive) and a (exclusive)
+ */
+static uint8_t RandomInt(uint32_t* state, uint8_t a) {
+	uint32_t i;
+	i = *state;
+	i ^= i << 13;
+	i ^= i >> 17;
+	i ^= i << 5;
+	*state = i;
+	return i % a;
+}
 
 /** @brief performs a card play
  *
@@ -69,9 +107,10 @@ void PlayCard( GameInfo* game_info, CardId card ) {
 /** @brief Simulates a random game
  *
  * @param game_info pointer to GameInfo struct to operate on. game_info will not be preserved!
- * @return Score value for Re.
+ * @param random_state pointer to 32bit random state used by Random and RandomInt
+ * @return Score value for player 0
  */
-Score Simulate( GameInfo* game_info ) {
+Score Simulate( GameInfo* game_info, uint32_t* random_state ) {
 	CardSet legal_card_set;
 	CardId legal_cards[12];
 	uint8_t legal_cards_len;
@@ -95,7 +134,7 @@ Score Simulate( GameInfo* game_info ) {
 			legal_card_set >>= 2;
 		}
 		/* determine random legal card to play and play it */
-		PlayCard( game_info, legal_cards[rand() % legal_cards_len] );
+		PlayCard( game_info, legal_cards[RandomInt(random_state, legal_cards_len)] );
 	}
 	/* return score for party of player 0 */
 	PlayerId p;
@@ -108,19 +147,6 @@ Score Simulate( GameInfo* game_info ) {
 	return result;
 }
 
-/** @brief Samples random float numbers in [0,1) interval
- *
- * @return Random number (float) in [0,1) interval
- */
-static float Random() {
-	static union {
-		uint32_t i;
-		float f;
-	} u;
-	u.i = rand() & 0x007fffff | 0x3f800000;
-	return u.f-1.0;
-}
-
 /** @brief Samples card distribution
  *
  *  This function samples a card distribution according to the information given in card_info.
@@ -130,8 +156,9 @@ static float Random() {
  *  			this can be used with an initialized GameInfo object where the remaining card will be
  *  			filed in.
  *  @param card_info Information about which cards are to be dealed and with which scores.
+ *  @param random_state pointer to 32bit value used as random state by Random and RandomInt
  */
-void MCSample( GameInfo* dest, CardInfo* card_info ) {
+void MCSample( GameInfo* dest, CardInfo* card_info, uint32_t* random_state ) {
 	/* sample the cards */
 	CardId c;
 	int8_t i;
@@ -139,7 +166,7 @@ void MCSample( GameInfo* dest, CardInfo* card_info ) {
 	float r;
 	while ( card_info->cards_left > 0 ) {
 		c = --(card_info->cards_left);
-		r = Random() * (card_info->scores[0][c] + card_info->scores[1][c] + card_info->scores[2][c]);
+		r = Random(random_state) * (card_info->scores[0][c] + card_info->scores[1][c] + card_info->scores[2][c]);
 		if ( r < card_info->scores[0][c] ) {
 			p = 0;
 		} else if ( r < card_info->scores[0][c] + card_info->scores[1][c] ) {
@@ -174,7 +201,7 @@ void MCSample( GameInfo* dest, CardInfo* card_info ) {
 
 		/* add card to player */
 		dest->player_cardsets[p+1] += CARDSHIFT(card_info->ids[c]);
-		if ( card_info->ids[c] = CLUB_QUEEN ) {
+		if ( card_info->ids[c] == CLUB_QUEEN ) {
 			dest->player_isre[p+1] = true;
 		}
 	}
@@ -189,7 +216,6 @@ void MCSample( GameInfo* dest, CardInfo* card_info ) {
  *
  * 	@param game_info pointer to GameInfo object to operate on. Only cardsets of
  * 		players will be moified
- *
  * 	@param card_info pointer to CardInfo object to operate on.
  */
 void Prepare( GameInfo* game_info, CardInfo* card_info ) {
@@ -255,65 +281,73 @@ void Prepare( GameInfo* game_info, CardInfo* card_info ) {
 	}
 }
 
-/** @brief Adds quantity to entry in card_info and renorms the other entries.
+/** @brief holds all data a worker thread needs
  */
-void Renorm( CardInfo* card_info, PlayerId p, CardId c, float quantity ) {
-	int8_t i;
-	for ( i = card_info->cards_left - 1; i >= 0; i-- ) {
-		if ( i == c ) {
-			card_info->scores[p][i] += quantity;
-		} else {
-			card_info->scores[p][i] -= quantity * card_info->scores[p][i]
-											/ ( card_info->sum[p] - card_info->scores[p][c] );
-		}
-	}
-}
-
 typedef struct {
+	/* thread uid */
+	pthread_t thread;
+	/* parameters */
 	const CardId * card_list;
 	uint8_t card_list_len;
 	const GameInfo * game_info_in;
 	const CardInfo * card_info_in;
+	clock_t time_goal;
+	uint32_t random_seed;
+	/* return values */
 	uint32_t result[12];
-} WorkerArg;
-
-void * WorkerRoutine( void * arg ) {
-	uint8_t card_list_i;
+	/* static data not initialized */
 	GameInfo game_info_tmp;
 	GameInfo game_info_tmp2;
 	CardInfo card_info_tmp;
+} WorkerData;
 
-	int i = 0;
-	int j = 0;
-	for ( i = 0; i < 1000; i++ ) {
-		for ( card_list_i = 0; card_list_i < ((WorkerArg*)arg)->card_list_len; card_list_i++ ) {
-			game_info_tmp = *(((WorkerArg*)arg)->game_info_in);
-			card_info_tmp = *(((WorkerArg*)arg)->card_info_in);
-			PlayCard( &game_info_tmp, ((WorkerArg*)arg)->card_list[card_list_i] );
-			MCSample( &game_info_tmp, &card_info_tmp );
-			for ( j = 0; j < 1000; j++ ) {
-				game_info_tmp2 = game_info_tmp;
-				((WorkerArg*)arg)->result[card_list_i] += Simulate( &game_info_tmp2 );
+#include "cardinfo.c"
+
+/** @brief this is the worker thread routine
+ *
+ * 	@param arg pointer to data structure holding all relevant data and return data fields
+ * 	@return returns NULL, returned data is in result field of WorkerData struct
+ */
+void * WorkerRoutine( WorkerData * arg ) {
+ 	#define NSIM 100
+	uint8_t card_list_i;
+	arg->time_goal += clock();
+
+	uint32_t j = 0;
+	while ( clock() < arg->time_goal ) {
+		arg->game_info_tmp = *arg->game_info_in;
+		arg->card_info_tmp = *arg->card_info_in;
+		MCSample( &arg->game_info_tmp, &arg->card_info_tmp, &arg->random_seed );
+		for ( card_list_i = 0; card_list_i < arg->card_list_len; card_list_i++ ) {
+			for ( j = 0; j < NSIM; j++ ) {
+				arg->game_info_tmp2 = arg->game_info_tmp;
+				PlayCard( &arg->game_info_tmp2, arg->card_list[card_list_i] );
+				arg->result[card_list_i] += Simulate( &arg->game_info_tmp2, &arg->random_seed );
 			}
 		}
 	}
 	return NULL;
 }
 
-/** @brief gets best card
- *
+/** @brief gets best card. This is the main routine of the ai. It creates worker threads and
+ * 			manages all central important stuff.
+ *	@param game_info pointer to GameInfo object
+ *	@param card_info holds dat concerning the card distribution probabilities
+ *	@return returns id of best card.
  */
 CardId GetBestCard( GameInfo* game_info, CardInfo* card_info ) {
+	/* prepare objects */
 	Prepare( game_info, card_info );
 	
 	CardId card_list[12];
-	uint32_t card_scores[12];
+	uint32_t card_scores[12] = {0};
 	uint8_t card_list_len = 0;
+
 	uint8_t card_list_i;
+
 	/* find list of legal cards */
 	CardId card_id = 0;
-	CardSet card_set;
-	card_set = game_info->player_cardsets[0] & suit_sets[game_info->tricksuit];
+	CardSet card_set  = game_info->player_cardsets[0] & suit_sets[game_info->tricksuit];
 	if ( card_set == 0 ) {
 		card_set = game_info->player_cardsets[0];
 	}
@@ -329,33 +363,34 @@ CardId GetBestCard( GameInfo* game_info, CardInfo* card_info ) {
 	}
 
 	/* start worker threads */
-	pthread_t threads[8];
-	WorkerArg args[8];
-	int n;
-	int N = get_nprocs();
-	if ( N < 1 ) {
-		N = 1;
-	}
-	if ( N > 8 ) {
-		N = 8;
-	}
-	for ( n = 0; n < N; n++ ) {
+	uint8_t thread_i;
+	uint8_t thread_num;
+	WorkerData* thread_args;
+	thread_num = get_nprocs();
+	thread_num = thread_num < 1 ? 1 : thread_num > 8 ? 8 : thread_num;
+	thread_num = 4;
+	thread_args = malloc(sizeof(WorkerData)*thread_num);
+	for ( thread_i = 0; thread_i < thread_num; thread_i++ ) {
 		/* initialize args */
-		args[n].card_list = card_list;
-		args[n].card_list_len = card_list_len;
-		args[n].game_info_in = game_info;
-		args[n].card_info_in = card_info;
+		thread_args[thread_i].card_list = card_list;
+		thread_args[thread_i].card_list_len = card_list_len;
+		thread_args[thread_i].game_info_in = game_info;
+		thread_args[thread_i].card_info_in = card_info;
+		thread_args[thread_i].time_goal = 8*CLOCKS_PER_SEC*thread_num;
+		thread_args[thread_i].random_seed = rand();
 		for ( card_list_i = 0; card_list_i < card_list_len; card_list_i++ ) {
-			args[n].result[card_list_i] = 0ul;
+			thread_args[thread_i].result[card_list_i] = 0ul;
 		}
-		pthread_create( &(threads[n]), NULL, &WorkerRoutine, &(args[n]) );
+		/* start the worker */
+		pthread_create( &(thread_args[thread_i].thread), NULL, (void*(*)(void*))&WorkerRoutine, &(thread_args[thread_i]) );
+		//WorkerRoutine( &(thread_args[thread_i]) );
 	}
 	
 	/* join worker threads */
-	for ( n = 0; n < N; n++ ) {
-		pthread_join( threads[n], NULL );
+	for ( thread_i = 0; thread_i < thread_num; thread_i++ ) {
+		pthread_join( thread_args[thread_i].thread, NULL );
 		for ( card_list_i = 0; card_list_i < card_list_len; card_list_i++ ) {
-		   card_scores[card_list_i] += 	args[n].result[card_list_i];
+		   card_scores[card_list_i] += 	thread_args[thread_i].result[card_list_i];
 		}
 	}
 
