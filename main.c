@@ -72,6 +72,8 @@ void init( GameInfo* game_info, CardInfo* card_info ) {
 	game_info->trickscore = 0;
 	game_info->tricksuit = NOSUIT;
 
+	printf("Enter beginning player :")
+	scanf("%hhu", &(game_info->next))
  	
 	for ( int i = 0; i < 12; i++ ) {
 		CardId c;
@@ -79,7 +81,7 @@ void init( GameInfo* game_info, CardInfo* card_info ) {
 		char input[3];
 		printf("Enter next card :");
 		scanf("%2s", input);
-		c = CardFromString(input)
+		c = CardFromString(input);
 		game_info->player_cardsets[0] += CARDSHIFT(c);
 		if ( c == CLUB_QUEEN ) {
 			game_info->player_isre[0] = true;
