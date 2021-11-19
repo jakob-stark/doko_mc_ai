@@ -119,6 +119,7 @@ static Score Simulate( GameInfo* game_info, uint32_t* random_state ) {
 		/* determine legal cards to play */
 		legal_card_set = game_info->player_cardsets[game_info->next] & suit_sets[game_info->tricksuit];
 		if ( legal_card_set == 0 ) {
+			/* if no card is legal, the player may choose freely which card to play */
 			legal_card_set = game_info->player_cardsets[game_info->next];
 		}
 		legal_cards_len = 0;
@@ -126,6 +127,7 @@ static Score Simulate( GameInfo* game_info, uint32_t* random_state ) {
 		while ( legal_card_set != 0 ) {
 			switch ( legal_card_set % 4 ) {
 				case 2:
+					/* add the card two times (note C case fallthrough */
 					legal_cards[legal_cards_len++] = legal_card_id;
 				case 1:
 					legal_cards[legal_cards_len++] = legal_card_id;
@@ -150,11 +152,11 @@ static Score Simulate( GameInfo* game_info, uint32_t* random_state ) {
 /** @brief Samples card distribution
  *
  *  This function samples a card distribution according to the information given in card_info.
- *  It does'n preserve dest nor card_info, so make sure to copy them.
+ *  It doesn't preserve dest nor card_info, so make sure to copy them.
  *
  *  @param dest Destination GameInfo object. Will only add cards to the cardsets of players 1-3. So
  *  			this can be used with an initialized GameInfo object where the remaining card will be
- *  			filed in.
+ *  			filled in.
  *  @param card_info Information about which cards are to be dealed and with which scores.
  *  @param random_state pointer to 32bit value used as random state by Random and RandomInt
  */
@@ -363,10 +365,10 @@ CardId GetBestCard( GameInfo* game_info, CardInfo* card_info ) {
 	/* start worker threads */
 	uint8_t thread_i;
 	uint8_t thread_num;
+    /* detect number of processors and launch as many thread. (threads are capped at 8 though */
 	WorkerData* thread_args;
 	thread_num = get_nprocs();
 	thread_num = thread_num < 1 ? 1 : thread_num > 8 ? 8 : thread_num;
-	thread_num = 4;
 	thread_args = malloc(sizeof(WorkerData)*thread_num);
 	for ( thread_i = 0; thread_i < thread_num; thread_i++ ) {
 		/* initialize args */
