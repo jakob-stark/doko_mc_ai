@@ -1,7 +1,8 @@
-#ifndef GAME_H
-#define GAME_H
+#ifndef CORE_H
+#define CORE_H
 
 #include <stdint.h>
+#include <stdbool.h>
 
 enum {CLUB=0, SPADE, HEART, DIAMOND, TRUMP, NOSUIT};
 typedef uint8_t Suit;
@@ -22,12 +23,10 @@ typedef uint8_t CardId;
 typedef uint8_t PlayerId;
 typedef uint64_t CardSet;
 
-typedef uint8_t Bool;
-
 typedef struct {
 	CardSet  player_cardsets[4];
 	Score    player_scores[4];
-	Bool	 player_isre[4];
+	bool	 player_isre[4];
 	uint8_t  cards_left;
 
 	PlayerId next;
@@ -39,18 +38,16 @@ typedef struct {
 } GameInfo;
 
 typedef struct {
-	uint8_t cards_left;
-	float scores[3][36];
-	CardId ids[36];
-	float sum[3];
-	uint8_t one;
-} CardInfo;
+    Score player_score;
+    CardId first_played_card;
+} SimulationResult;
 
 extern const char * const card_names[24];
 extern const char * const card_names_long[24];
 
-CardId GetBestCard( GameInfo* game_info, CardInfo* card_info );
-void ExecuteMove( GameInfo* game_info, CardInfo* card_info, CardId card );
+uint8_t GetLegalCards( const GameInfo* game_info, CardId legal_cards[12] );
+void PlayCard( GameInfo* game_info, CardId card );
+SimulationResult Simulate( const GameInfo* game_info, uint32_t* random_state );
 
 #endif
 

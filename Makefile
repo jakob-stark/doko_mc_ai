@@ -9,3 +9,11 @@ main.o: main.c game.h
 
 game.o: game.c game.h
 	gcc $(CC-FLAGS) -c -o $@ $<
+
+%.o: %.c
+	gcc $(CC-FLAGS) -c -o $@ $<
+
+random.c: random.h
+
+core.c: core.h random.h
+

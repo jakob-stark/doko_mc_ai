@@ -5,7 +5,7 @@
 #include "game.h"
 
 CardId CardFromString( const char input[2] ) {
-	CardId c;
+	CardId c = INVALID;
 		switch ( input[0] ) {
 			case 'd':
 				switch ( input[1] ) {
@@ -52,36 +52,30 @@ CardId CardFromString( const char input[2] ) {
 }
 
 void init( GameInfo* game_info, CardInfo* card_info ) {
-	game_info->player_cardsets[0] = 0ul;
-	game_info->player_cardsets[1] = 0ul;
-	game_info->player_cardsets[2] = 0ul;
-	game_info->player_cardsets[3] = 0ul;
+    PlayerId p;
+    for ( p = 0; p < 4; p++ ) {
+	    game_info->player_cardsets[p] = 0ul;
+	    game_info->player_scores[p] = 0;
+	    game_info->player_isre[p] = false;
+    }
 
-	game_info->player_scores[0] = 0;
-	game_info->player_scores[1] = 0;
-	game_info->player_scores[2] = 0;
-	game_info->player_scores[3] = 0;
-	
-	game_info->player_isre[0] = false;
-	game_info->player_isre[1] = false;
-	game_info->player_isre[2] = false;
-	game_info->player_isre[3] = false;
-
-	game_info->cards_left = 48;
-	game_info->next = 0;
+    game_info->cards_left = 48;
+	game_info->next = 4;
 	game_info->trickscore = 0;
 	game_info->tricksuit = NOSUIT;
 
-	printf("Enter beginning player :")
-	scanf("%hhu", &(game_info->next))
+	printf("Enter beginning player :");
+	scanf("%hhu", &(game_info->next));
+    printf("Player %u begins\n", game_info->next);
  	
 	for ( int i = 0; i < 12; i++ ) {
-		CardId c;
-
-		char input[3];
-		printf("Enter next card :");
+	    CardId c;
+	    char input[3];
+		printf("Enter next card :\n");
 		scanf("%2s", input);
 		c = CardFromString(input);
+        printf("Got card '%s'\n", card_names[c]);
+
 		game_info->player_cardsets[0] += CARDSHIFT(c);
 		if ( c == CLUB_QUEEN ) {
 			game_info->player_isre[0] = true;
