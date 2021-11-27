@@ -48,7 +48,7 @@ static const CardSet suit_sets[6] = {
  * @param random_state pointer to 32bit random state used by Random and RandomInt
  * @return Score value for player 0
  */
-SimulationResult Simulate( const GameInfo* game_info_, uint32_t* random_state ) {
+SimulationResult RandomSimulate( const GameInfo* game_info_, uint32_t* random_state ) {
     GameInfo game_info;
     SimulationResult result;
 	CardId legal_cards[12];
