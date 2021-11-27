@@ -50,7 +50,7 @@ static const CardSet suit_sets[6] = {
  */
 SimulationResult RandomSimulate( const GameInfo* game_info_, uint32_t* random_state ) {
     GameInfo game_info;
-    SimulationResult result;
+    SimulationResult result = {0,0};
 	CardId legal_cards[12];
     CardId played_cards[48];
     CardId next_card;
