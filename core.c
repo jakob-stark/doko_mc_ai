@@ -48,31 +48,32 @@ static const CardSet suit_sets[6] = {
  * @param random_state pointer to 32bit random state used by Random and RandomInt
  * @return Score value for player 0
  */
-SimulationResult RandomSimulate( const GameInfo* game_info_, uint32_t* random_state ) {
+ Score Simulate( const GameInfo* game_info_in, CardId next_card, uint32_t* random_state ) {
+    Score result;
+	PlayerId p;
     GameInfo game_info;
-    SimulationResult result = {0,0};
 	CardId legal_cards[12];
-    CardId played_cards[48];
-    CardId next_card;
 	uint8_t legal_cards_len;
-    /* get a copy of the game_info */
-    game_info = *game_info_;
-	while ( game_info.cards_left > 0 ) {
+
+    /* get a copy of the game_info and play the first card on it */
+    game_info = *game_info_in;
+    PlayCard(&game_info, next_card);
+	
+    while ( game_info.cards_left > 0 ) {
 		/* determine legal cards to play */
         legal_cards_len = GetLegalCards(&game_info, legal_cards);
-		/* determine random legal card to play, store it and play it */
+		/* determine random legal card and play it */
         next_card = legal_cards[RandomC(random_state, legal_cards_len)];
-        played_cards[game_info.cards_left-1] = next_card;
 		PlayCard(&game_info, next_card);
 	}
-	/* return score for party of player 0 */
-	PlayerId p;
+	
+    /* return score for party of player 0 */
+    result = 0;
 	for ( p = 0; p < 4; p++ ) {
 		if ( game_info.player_isre[p] == game_info.player_isre[0] ) {
-			result.player_score += game_info.player_scores[p];
+			result += game_info.player_scores[p];
 		}
 	}
-    result.first_played_card = played_cards[game_info_->cards_left-1];
 	return result;
 }
 

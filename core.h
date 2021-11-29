@@ -61,17 +61,12 @@ typedef struct {
 	PlayerId trickwinner;
 } GameInfo;
 
-typedef struct {
-    Score player_score;
-    CardId first_played_card;
-} SimulationResult;
-
 extern const char * const card_names[24];
 extern const char * const card_names_long[24];
 
 uint8_t GetLegalCards( const GameInfo* game_info, CardId legal_cards[12] );
 void PlayCard( GameInfo* game_info, CardId card );
-SimulationResult RandomSimulate( const GameInfo* game_info, uint32_t* random_state );
+Score Simulate( const GameInfo* game_info, CardId next_card, uint32_t* random_state );
 
 #endif
 
