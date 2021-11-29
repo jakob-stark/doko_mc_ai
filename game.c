@@ -2,8 +2,8 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdbool.h>
+#include <threads.h>
 
-#include <pthread.h>
 #include <sys/sysinfo.h>
 
 #include "game.h"

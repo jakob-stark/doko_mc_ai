@@ -69,9 +69,6 @@ void mc_sample( GameInfo* dest, const CardInfo* card_info, uint32_t* random_stat
     /* use a slot based sampling. Each player gets as many slot groups as he
      * needs cards. Each slot group consist of three slots.
      *
-     * 845.3 (mean)
-     * 454.6 (std)
-     *
      * After that each card is randomly put to an open slot of any player. If
      * the card has restrictions some slots may be blocked for this card.  E.g.
      * if the card has score {0,5,4} all slots of player 0 will be blocked as
@@ -105,6 +102,13 @@ void mc_sample( GameInfo* dest, const CardInfo* card_info, uint32_t* random_stat
                 ci.player_left[p]--;
                 break;
             }
+        }
+    }
+
+    /* set the re flags */
+    for ( p = 0; p < 4; p++ ) {
+        if ( dest->player_cardsets[p] && (3ul << 2*CLUB_QUEEN) ) {
+            dest->player_isre[p] = true;
         }
     }
 }

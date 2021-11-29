@@ -9,28 +9,29 @@
 #include "core.h"
 #include "random.h"
 
-const char * const card_names[24] = { 
+const char * const card_names[25] = {
 	"cn", "ck", "ct", "ca", "sn", "sk", "st", "sa", "hn", "hk", "ha",
-	"dn", "dk", "dt", "da", "dj", "hj", "sj", "cj", "dq", "hq", "sq", "cq", "ht"
+	"dn", "dk", "dt", "da", "dj", "hj", "sj", "cj", "dq", "hq", "sq", "cq", "ht", "ic"
 };
 
-const char * const card_names_long[24] = {
+const char * const card_names_long[25] = {
     "club nine", "club king", "club ten", "club ace",
     "spade nine", "spade king", "spade ten", "spade ace",
     "heard nine", "heart king", "heart ace",
     "diamond nine", "diamond king", "diamond ten", "diamond ace",
     "diamond jack", "heart jack", "spade jack", "club jack",
     "diamond queen", "heart queen", "spade queen", "club queen",
-    "heart ten"
+    "heart ten", "invalid"
 };
 
-static const Score card_values[24] = {
-	0, 4, 10, 11, 0, 4, 10, 11, 0, 4, 11, 0, 4, 10, 11,	2, 2, 2, 2, 3, 3, 3, 3, 10
+static const Score card_values[25] = {
+	0, 4, 10, 11, 0, 4, 10, 11, 0, 4, 11, 0, 4, 10, 11,	2, 2, 2, 2, 3, 3, 3, 3, 10, 0
 };
 
-static const Suit card_suits[24] = {
+static const Suit card_suits[25] = {
 	CLUB, CLUB, CLUB, CLUB, SPADE, SPADE, SPADE, SPADE, HEART, HEART, HEART,
-	TRUMP, TRUMP, TRUMP, TRUMP, TRUMP, TRUMP, TRUMP, TRUMP, TRUMP, TRUMP, TRUMP, TRUMP, TRUMP
+	TRUMP, TRUMP, TRUMP, TRUMP, TRUMP, TRUMP, TRUMP, TRUMP, TRUMP, TRUMP, TRUMP, TRUMP, TRUMP,
+    NOSUIT
 };
 
 static const CardSet suit_sets[6] = {
