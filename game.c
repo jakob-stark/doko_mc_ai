@@ -11,44 +11,51 @@
 /** @brief holds all data a worker thread needs
  */
 typedef struct {
-	/* thread uid */
-	pthread_t thread;
-	/* parameters */
-	const CardId * card_list;
-	uint8_t card_list_len;
-	const GameInfo * game_info_in;
-	const CardInfo * card_info_in;
+	/* input parameters */
+    const CardId * legal_cards;
+    CardId legal_cards_len;
+	const GameInfo * game_info;
+	const CardInfo * card_info;
+    /* additional options */
+    uint8_t stop;
 	clock_t time_goal;
 	uint32_t random_seed;
+    thrd_t thread_id;
 	/* return values */
-	uint32_t result[12];
-	/* static data not initialized */
-	GameInfo game_info_tmp;
-	GameInfo game_info_tmp2;
-	CardInfo card_info_tmp;
-} WorkerData;
+    uint32_t mc_sample_calls;
+    uint32_t simulate_calls;
+	uint32_t results[12];
+} worker_data_t;
 
 /** @brief this is the worker thread routine
  *
  * 	@param arg pointer to data structure holding all relevant data and return data fields
  * 	@return returns NULL, returned data is in result field of WorkerData struct
  */
-static void * WorkerRoutine( WorkerData * arg ) {
+void * WorkerRoutine( worker_data_t * arg ) {
  	#define NSIM 100
-	uint8_t card_list_i;
+
+    /* get a copy of the game_info and card_info structs,
+     * as we need to change it during Simulation */
+    GameInfo game_info = *(arg->game_info);
+
+    /* calculate absolute goal time */
 	arg->time_goal += clock();
 
 	uint32_t j = 0;
-	while ( clock() < arg->time_goal ) {
-		arg->game_info_tmp = *arg->game_info_in;
-		arg->card_info_tmp = *arg->card_info_in;
-		MCSample( &arg->game_info_tmp, &arg->card_info_tmp, &arg->random_seed );
-		for ( card_list_i = 0; card_list_i < arg->card_list_len; card_list_i++ ) {
-			for ( j = 0; j < NSIM; j++ ) {
-				arg->game_info_tmp2 = arg->game_info_tmp;
-				PlayCard( &arg->game_info_tmp2, arg->card_list[card_list_i] );
-				arg->result[card_list_i] += Simulate( &arg->game_info_tmp2, &arg->random_seed );
-			}
+	while ( clock() < arg->time_goal && arg->stop == 0 ) {
+        /* get a fresh copy of the game info */
+        game_info = *(arg->game_info);
+
+        /* randomly distribute the cards */
+        mc_sample(&game_info, arg->card_info, &arg->random_seed);
+        arg->mc_sample_calls++;
+
+        /* simulate a game for each legal card and collect the results */
+        for ( uint8_t c = 0; c < legal_cards_len; c++ ) {
+            GameInfo game_info_copy = game_info;
+            arg->result[c] += Simulate(&game_info_copy, arg->legal_cards[c], &arg->random_seed);
+            arg->simulate_calls++;
 		}
 	}
 	return NULL;
@@ -60,56 +67,49 @@ static void * WorkerRoutine( WorkerData * arg ) {
  *	@param card_info holds dat concerning the card distribution probabilities
  *	@return returns id of best card.
  */
-CardId GetBestCard( GameInfo* game_info, CardInfo* card_info ) {
-	/* prepare objects */
-	Prepare( game_info, card_info );
-	
-	CardId card_list[12];
-	uint32_t card_scores[12] = {0};
-	uint8_t card_list_len = 0;
+CardId GetBestCard( const GameInfo* game_info, const CardInfo* card_info ) {
+    /* get a copy of the card info */
+    CardInfo card_info = *card_info;
 
-	uint8_t card_list_i;
+	/* prepare card_info by sorting it */
+    sort_and_check(&card_info);
 
-	/* find list of legal cards */
-	CardId card_id = 0;
-	CardSet card_set  = game_info->player_cardsets[0] & suit_sets[game_info->tricksuit];
-	if ( card_set == 0 ) {
-		card_set = game_info->player_cardsets[0];
-	}
-	while ( card_set != 0 ) {
-		switch ( card_set % 4 ) {
-			case 2:
-				card_list[card_list_len++] = card_id;
-			case 1:
-				card_list[card_list_len++] = card_id;
-		}
-		card_id++;
-		card_set >>= 2;
-	}
+    /* get legal cards for next move */
+	CardId legal_cards[12];
+	uint8_t legal_cards_len;
+    legal_cards_len = GetLegalCards(game_info, legal_cards);
 
-	/* start worker threads */
-	uint8_t thread_i;
+    /* prepare the output */
+	uint32_t results[12] = {0};
+
+    /* detect number of processors and launch as many thread. (threads are capped at 16 though) */
 	uint8_t thread_num;
-    /* detect number of processors and launch as many thread. (threads are capped at 8 though */
-	WorkerData* thread_args;
+	worker_data_t* thread_args;
 	thread_num = get_nprocs();
-	thread_num = thread_num < 1 ? 1 : thread_num > 8 ? 8 : thread_num;
-	thread_args = malloc(sizeof(WorkerData)*thread_num);
-	for ( thread_i = 0; thread_i < thread_num; thread_i++ ) {
-		/* initialize args */
-		thread_args[thread_i].card_list = card_list;
-		thread_args[thread_i].card_list_len = card_list_len;
-		thread_args[thread_i].game_info_in = game_info;
-		thread_args[thread_i].card_info_in = card_info;
-		thread_args[thread_i].time_goal = 8*CLOCKS_PER_SEC*thread_num;
+	thread_num = thread_num < 1 ? 1 : thread_num > 16 ? 16 : thread_num;
+	thread_args = malloc(sizeof(worker_data_t)*thread_num);
+	for ( uint8_t thread_i = 0; thread_i < thread_num; thread_i++ ) {
+		/* initialize parameters */
+		thread_args[thread_i].legal_cards = legal_cards;
+		thread_args[thread_i].legal_cards_len = legal_cards_len;
+		thread_args[thread_i].game_info = game_info;
+		thread_args[thread_i].card_info = card_info;
+        /* initialize options */
+        thread_args[thread_i].stop = 0;
+		thread_args[thread_i].time_goal = 1*CLOCKS_PER_SEC;
 		thread_args[thread_i].random_seed = rand();
-		for ( card_list_i = 0; card_list_i < card_list_len; card_list_i++ ) {
-			thread_args[thread_i].result[card_list_i] = 0ul;
-		}
+
+        /* initialize return values */
+        thread_args[thread_i].mc_sample_calls = 0ul;
+        thread_args[thread_i].simulate_calls = 0ul;
+        thread_args[thread_i].mc_sample_calls = 0ul;
+        memset(&thread_args[thread_i].results, 0, sizeof(thread_args[thread_i].results));
+
 		/* start the worker */
-		pthread_create( &(thread_args[thread_i].thread), NULL, (void*(*)(void*))&WorkerRoutine, &(thread_args[thread_i]) );
-		//WorkerRoutine( &(thread_args[thread_i]) );
+        thrd_create(&thread_args[thread_i].thread_id,
+                    (thread_start_t)&WorkerRoutine, &thread_args[thread_i]);
 	}
+    ??? continue here
 	
 	/* join worker threads */
 	for ( thread_i = 0; thread_i < thread_num; thread_i++ ) {
