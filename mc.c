@@ -3,9 +3,6 @@
 #include <stdio.h>
 #include <stdbool.h>
 
-#include <pthread.h>
-#include <sys/sysinfo.h>
-
 #include "core.h"
 #include "random.h"
 #include "mc.h"
