@@ -2,152 +2,206 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdbool.h>
+#include <threads.h>
 
-#include <pthread.h>
 #include <sys/sysinfo.h>
 
+#include "game.h"
 #include "core.h"
-#include "random.h"
+#include "mc.h"
+#include "log.h"
 
-const char * const card_names[25] = {
-	"cn", "ck", "ct", "ca", "sn", "sk", "st", "sa", "hn", "hk", "ha",
-	"dn", "dk", "dt", "da", "dj", "hj", "sj", "cj", "dq", "hq", "sq", "cq", "ht", "ic"
-};
-
-const char * const card_names_long[25] = {
-    "club nine", "club king", "club ten", "club ace",
-    "spade nine", "spade king", "spade ten", "spade ace",
-    "heard nine", "heart king", "heart ace",
-    "diamond nine", "diamond king", "diamond ten", "diamond ace",
-    "diamond jack", "heart jack", "spade jack", "club jack",
-    "diamond queen", "heart queen", "spade queen", "club queen",
-    "heart ten", "invalid"
-};
-
-static const Score card_values[25] = {
-	0, 4, 10, 11, 0, 4, 10, 11, 0, 4, 11, 0, 4, 10, 11,	2, 2, 2, 2, 3, 3, 3, 3, 10, 0
-};
-
-static const Suit card_suits[25] = {
-	CLUB, CLUB, CLUB, CLUB, SPADE, SPADE, SPADE, SPADE, HEART, HEART, HEART,
-	TRUMP, TRUMP, TRUMP, TRUMP, TRUMP, TRUMP, TRUMP, TRUMP, TRUMP, TRUMP, TRUMP, TRUMP, TRUMP,
-    NOSUIT
-};
-
-static const CardSet suit_sets[6] = {
-	0x00000000000000fful,
-	0x000000000000ff00ul,
-	0x00000000003f0000ul,
-	0x0000000000000000ul,
-	0x0000ffffffc00000ul,
-	0x0000fffffffffffful
-};
-
-/** @brief Simulates a random game
- *
- * @param game_info pointer to GameInfo struct to simulate
- * @param random_state pointer to 32bit random state used by Random and RandomInt
- * @return Score value for player 0
+/** @brief holds all data a worker thread needs
  */
- Score Simulate( const GameInfo* game_info_in, CardId next_card, uint32_t* random_state ) {
-    Score result;
-	PlayerId p;
-    GameInfo game_info;
+typedef struct {
+	/* input parameters */
+    const CardId * legal_cards;
+    CardId legal_cards_len;
+	const GameInfo * game_info;
+	const CardInfo * card_info;
+    /* additional options */
+    uint8_t stop;
+	clock_t time_goal;
+	uint32_t random_seed;
+    thrd_t thread_id;
+	/* return values */
+    uint32_t mc_sample_calls;
+    uint32_t simulate_calls;
+	uint32_t results[12];
+} worker_data_t;
+
+/** @brief this is the worker thread routine
+ *
+ * 	@param arg pointer to data structure holding all relevant data and return data fields
+ * 	@return returns NULL, returned data is in result field of WorkerData struct
+ */
+int * WorkerRoutine( worker_data_t * arg ) {
+ 	#define NSIM 100
+
+    /* get a copy of the game_info and card_info structs,
+     * as we need to change it during Simulation */
+    GameInfo game_info = *(arg->game_info);
+
+    /* calculate absolute goal time */
+	arg->time_goal += clock();
+
+	while ( clock() < arg->time_goal && arg->stop == 0 ) {
+        /* get a fresh copy of the game info */
+        game_info = *(arg->game_info);
+
+        /* randomly distribute the cards */
+        mc_sample(&game_info, arg->card_info, &arg->random_seed);
+        arg->mc_sample_calls++;
+
+        /* simulate a game for each legal card and collect the results */
+        for ( uint8_t c = 0; c < arg->legal_cards_len; c++ ) {
+            GameInfo game_info_copy = game_info;
+            arg->results[c] += Simulate(&game_info_copy, arg->legal_cards[c], &arg->random_seed);
+            arg->simulate_calls++;
+		}
+	}
+	return NULL;
+}
+
+/** @brief gets best card. This is the main routine of the ai. It creates worker threads and
+ * 			manages all central important stuff.
+ *	@param game_info pointer to GameInfo object
+ *	@param card_info holds dat concerning the card distribution probabilities
+ *	@return returns id of best card.
+ */
+CardId GetBestCard( const GameInfo* game_info, const CardInfo* card_info ) {
+    /* get a copy of the card info */
+    CardInfo card_info_copy = *card_info;
+
+	/* prepare card_info by sorting it */
+    sort_and_check(&card_info_copy);
+
+    /* get legal cards for next move */
 	CardId legal_cards[12];
 	uint8_t legal_cards_len;
+    legal_cards_len = GetLegalCards(game_info, legal_cards);
 
-    /* get a copy of the game_info and play the first card on it */
-    game_info = *game_info_in;
-    PlayCard(&game_info, next_card);
-	
-    while ( game_info.cards_left > 0 ) {
-		/* determine legal cards to play */
-        legal_cards_len = GetLegalCards(&game_info, legal_cards);
-		/* determine random legal card and play it */
-        next_card = legal_cards[RandomC(random_state, legal_cards_len)];
-		PlayCard(&game_info, next_card);
+    /* prepare the output */
+	uint32_t results[12] = {0};
+
+    /* detect number of processors and launch as many thread. (threads are capped at 16 though) */
+	uint8_t thread_num;
+	worker_data_t* thread_args;
+	thread_num = get_nprocs();
+	thread_num = thread_num < 1 ? 1 : thread_num > 16 ? 16 : thread_num;
+	thread_args = malloc(sizeof(worker_data_t)*thread_num);
+	for ( uint8_t thread_i = 0; thread_i < thread_num; thread_i++ ) {
+		/* initialize parameters */
+		thread_args[thread_i].legal_cards = legal_cards;
+		thread_args[thread_i].legal_cards_len = legal_cards_len;
+		thread_args[thread_i].game_info = game_info;
+		thread_args[thread_i].card_info = &card_info_copy;
+        /* initialize options */
+        thread_args[thread_i].stop = 0;
+		thread_args[thread_i].time_goal = 1*CLOCKS_PER_SEC;
+		thread_args[thread_i].random_seed = rand();
+
+        /* initialize return values */
+        thread_args[thread_i].mc_sample_calls = 0ul;
+        thread_args[thread_i].simulate_calls = 0ul;
+        thread_args[thread_i].mc_sample_calls = 0ul;
+        memset(&thread_args[thread_i].results, 0, sizeof(thread_args[thread_i].results));
+
+		/* start the worker */
+        thrd_create(&thread_args[thread_i].thread_id,
+                    (int * (*)(void *))&WorkerRoutine, &thread_args[thread_i]);
 	}
 	
-    /* return score for party of player 0 */
-    result = 0;
-	for ( p = 0; p < 4; p++ ) {
-		if ( game_info.player_isre[p] == game_info.player_isre[0] ) {
-			result += game_info.player_scores[p];
-		}
-	}
-	return result;
-}
-
-
-/** @brief get legal cards for next player
- *
- *  @param game_info pointer to the GameInfo object to get the legal cards from
- *  @param legal_cards pointer to array where the result is stored
- *  @return number of legal cards found and stored in legal_cards
- */
-uint8_t GetLegalCards( const GameInfo* game_info, CardId legal_cards[12] ) {
-    CardSet legal_card_set;
-    uint8_t legal_cards_len;
-    uint8_t legal_card_id;
-    /* determine legal cards to play */
-    legal_card_set = game_info->player_cardsets[game_info->next] & suit_sets[game_info->tricksuit];
-    if ( legal_card_set == 0 ) {
-        /* if no card is legal, the player may choose freely which card to play */
-        legal_card_set = game_info->player_cardsets[game_info->next];
-    }
-    legal_cards_len = 0;
-    legal_card_id = 0;
-    while ( legal_card_set != 0 ) {
-        switch ( legal_card_set % 4 ) {
-            case 2:
-                legal_cards[legal_cards_len++] = legal_card_id;
-            case 1:
-                legal_cards[legal_cards_len++] = legal_card_id;
-        }
-        legal_card_id++;
-        legal_card_set >>= 2;
-    }
-    return legal_cards_len;
-}
-    
-
-/** @brief performs a card play
- *
- *  @param game_info pointer to GameInfo struct to operate on. Will not be preserved!
- *  @param card Id of card to play. Will not check for consistency. If the next player
- *  			does not hold this card, the behaviour is undefined.
- */
-void PlayCard( GameInfo* game_info, CardId card ) {
-	/* remove card from players hand */
-	game_info->player_cardsets[game_info->next] -= CARDSHIFT(card);
-	--(game_info->cards_left);
-
-	/* add value to score */
-	game_info->trickscore += card_values[card];
-
-	if ( game_info->tricksuit == NOSUIT ) {
-		/* no card on trick */
-		game_info->tricksuit = card_suits[card];
-		game_info->trickwinnercard = card;
-		game_info->trickwinner = game_info->next;
-	} else {
-		/* test if new card is winning */
-		if ( card_suits[card] == game_info->tricksuit || card_suits[card] == TRUMP ) {
-			if ( card > game_info->trickwinnercard || ( card == HEART_TEN && game_info->cards_left > 4 ) ) {
-				game_info->trickwinnercard = card;
-				game_info->trickwinner = game_info->next;
-			}
+	/* join worker threads */
+    uint32_t mc_sample_calls = 0, simulate_calls = 0;
+	for ( uint8_t thread_i = 0; thread_i < thread_num; thread_i++ ) {
+		thrd_join(thread_args[thread_i].thread_id, NULL);
+		for ( uint8_t c = 0; c < legal_cards_len; c++ ) {
+		   results[c] += thread_args[thread_i].results[c];
+           mc_sample_calls += thread_args[thread_i].mc_sample_calls;
+           simulate_calls += thread_args[thread_i].simulate_calls;
 		}
 	}
 
-	/* test if trick is full */
-	if ( game_info->cards_left % 4 == 0 ) {
-		game_info->player_scores[game_info->trickwinner] += game_info->trickscore;
-		game_info->trickscore = 0;
-		game_info->tricksuit = NOSUIT;
-		game_info->next = game_info->trickwinner;
+	/* find best card in card list */
+	uint32_t max_score = 0;
+	CardId max_id;
+	for ( uint8_t c = 0; c < legal_cards_len; c++ ) {
+		if ( results[c] > max_score ) {
+			max_score = results[c];
+			max_id = legal_cards[c];
+		}
+	}
+    log(LOG_INFO, "Simulated %lu games during %lu samplings)",
+            simulate_calls, mc_sample_calls);
+    log(LOG_INFO, "%.2f points expected for %s",
+            (double)max_score/(double)simulate_calls, card_names_long[max_id]);
+	return max_id;
+}
+
+
+/** @brief Marks a card for removing into GameInfo.cardset by Prepare.
+ * 			
+ * 		Sets one entry for card to 1.0 for player and 0.0 for the other players.
+ * 		Thus Prepare will remove this entry from the list and add it to the GameInfo cardset member,
+ * 		so that PlayCard may be called upon this card.
+ *
+ * 	@param card_info Pointer to CardInfo object to operate on
+ * 	@param player Player Id. Note this is in Range (0-3) and will be converted into internal
+ *			player id numbering scheme used for CardInfo objects
+ *	@param card Card id
+ */
+static void RemoveToPlay( CardInfo* card_info, PlayerId player, CardId card ) {
+	uint8_t card_i;
+	PlayerId p = player-1;
+	
+	/* search for first occurence of card */
+	uint8_t first_i;
+	for ( card_i = 0; card_i < card_info->cards_left; card_i++ ) {
+		if ( card_info->ids[card_i] == card ) {
+			first_i = card_i;
+			break;
+		}
+	}
+
+	/* renorm other entries */
+	for ( card_i = 0; card_i < card_info->cards_left; card_i++ ) {
+		if ( card_i != first_i ) {
+			card_info->scores[p][card_i] -= (1.0 - card_info->scores[p][first_i]) 
+			   	* card_info->scores[p][card_i] / ( card_info->sum[p] - card_info->scores[p][first_i] );
+			card_info->scores[(p+1)%3][card_i] += card_info->scores[(p+1)%3][first_i]
+			   	* card_info->scores[(p+1)%3][card_i]
+				/ ( card_info->sum[(p+1)%3] - card_info->scores[(p+1)%3][first_i] );
+			card_info->scores[(p+2)%3][card_i] += card_info->scores[(p+2)%3][first_i]
+			   	* card_info->scores[(p+2)%3][card_i] 
+				/ ( card_info->sum[(p+2)%3] - card_info->scores[(p+2)%3][first_i] );
+		}
+	}
+	card_info->scores[ p     ][first_i] = 1.0; 
+	card_info->scores[(p+1)%3][first_i] = 0.0; 
+	card_info->scores[(p+2)%3][first_i] = 0.0; 
+}
+
+/** @brief Execute a move.
+ *
+ * 		This will handle all internal things that happen when someone plays a card. In case the machine
+ * 		itself plays a card, this simply removes it from the cardset[0] and updates the trick and scores.
+ * 		In case of human player this also processes information about the card played, such as for
+ * 		example if the player does not have a specific suit.
+ *
+ * 	@param game_info Pointer to GameInfo object to operate on.
+ * 	@param card_info Pointer to CardInfo object to operate on.
+ * 	@param card Card Id to play. Will not check if player has card.
+ */
+void ExecuteMove( GameInfo* game_info, CardInfo* card_info, CardId card ) {
+	if ( game_info->next == 0 ) {
+		/* perform machine move */
+		PlayCard( game_info, card );
 	} else {
-		game_info->next = (game_info->next + 1) % 4;
+		/* perform human move */
+		RemoveToPlay( card_info, game_info->next, card );
+		Prepare( game_info, card_info );
+		PlayCard( game_info, card );
 	}
 }
 
