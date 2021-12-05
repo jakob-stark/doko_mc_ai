@@ -1,7 +1,7 @@
 #ifndef MC_H
 #define MC_H
 
-#include "core.h"
+#include "simulate.h"
 
 /**
  * @brief Structure to hold all information about unknown cards

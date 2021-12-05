@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 
-#include "core.h"
+#include "simulate.h"
 #include "random.h"
 #include "mc.h"
 
@@ -81,12 +81,6 @@ void mc_sample( GameInfo* dest, const CardInfo* card_info, uint32_t* random_stat
     uint8_t random[4];
     const uint8_t score_to_slots[] = {0,0,0,1,2,3};
 
-
-    /*
-    for ( p = 0; p < 3; p++ ) {
-        nslots[p] = card_info->player_left[p];
-    }*/
-
     for ( c = 0; c < ci.cards_left; c++ ) {
         /* deal card at index c */
         random[0] = 0;
@@ -98,17 +92,10 @@ void mc_sample( GameInfo* dest, const CardInfo* card_info, uint32_t* random_stat
         r = RandomC(random_state, random[3]);
         for ( p = 0; p < 3; p++ ) {
             if ( /*random[p] <= r &&*/ r < random[p+1] ) {
-                dest->player_cardsets[p] += CARDSHIFT(ci.ids[c]);
+                dest->player_cardsets[p+1] += CARDSHIFT(ci.ids[c]);
                 ci.player_left[p]--;
                 break;
             }
-        }
-    }
-
-    /* set the re flags */
-    for ( p = 0; p < 4; p++ ) {
-        if ( dest->player_cardsets[p] && (3ul << 2*CLUB_QUEEN) ) {
-            dest->player_isre[p] = true;
         }
     }
 }

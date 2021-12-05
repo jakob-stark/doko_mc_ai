@@ -61,8 +61,8 @@ typedef struct {
 	PlayerId trickwinner;
 } GameInfo;
 
-extern const char * const card_names[24];
-extern const char * const card_names_long[24];
+extern const char * const card_names[25];
+extern const char * const card_names_long[25];
 
 uint8_t GetLegalCards( const GameInfo* game_info, CardId legal_cards[12] );
 void PlayCard( GameInfo* game_info, CardId card );

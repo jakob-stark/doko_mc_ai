@@ -6,7 +6,7 @@
 #include <pthread.h>
 #include <sys/sysinfo.h>
 
-#include "core.h"
+#include "simulate.h"
 #include "random.h"
 
 const char * const card_names[25] = {
@@ -98,12 +98,15 @@ uint8_t GetLegalCards( const GameInfo* game_info, CardId legal_cards[12] ) {
     legal_cards_len = 0;
     legal_card_id = 0;
     while ( legal_card_set != 0 ) {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wimplicit-fallthrough"
         switch ( legal_card_set % 4 ) {
             case 2:
                 legal_cards[legal_cards_len++] = legal_card_id;
             case 1:
                 legal_cards[legal_cards_len++] = legal_card_id;
         }
+#pragma GCC diagnostic pop
         legal_card_id++;
         legal_card_set >>= 2;
     }
@@ -121,6 +124,11 @@ void PlayCard( GameInfo* game_info, CardId card ) {
 	/* remove card from players hand */
 	game_info->player_cardsets[game_info->next] -= CARDSHIFT(card);
 	--(game_info->cards_left);
+
+    /* add player to re if the club queen is played */
+    if ( card == CLUB_QUEEN ) {
+        game_info->player_isre[game_info->next] = true;
+    }
 
 	/* add value to score */
 	game_info->trickscore += card_values[card];

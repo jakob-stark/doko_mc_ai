@@ -1,7 +1,7 @@
 #ifndef GAME_H
 #define GAME_H
 
-#include "core.h"
+#include "simulate.h"
 #include "mc.h"
 
 CardId GetBestCard( const GameInfo* game_info, const CardInfo* card_info );

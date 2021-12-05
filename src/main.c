@@ -2,7 +2,10 @@
 #include <stdlib.h>
 #include <time.h>
 #include <stdbool.h>
-#include "game.h"
+
+#include "simulate.h"
+#include "mc.h"
+#include "core.h"
 
 CardId CardFromString( const char input[2] ) {
 	CardId c = INVALID;
@@ -53,6 +56,8 @@ CardId CardFromString( const char input[2] ) {
 
 void init( GameInfo* game_info, CardInfo* card_info ) {
     PlayerId p;
+
+    /* initialize game_info */
     for ( p = 0; p < 4; p++ ) {
 	    game_info->player_cardsets[p] = 0ul;
 	    game_info->player_scores[p] = 0;
@@ -64,10 +69,11 @@ void init( GameInfo* game_info, CardInfo* card_info ) {
 	game_info->trickscore = 0;
 	game_info->tricksuit = NOSUIT;
 
-	printf("Enter beginning player :");
+	printf("Enter beginning player :\n");
 	scanf("%hhu", &(game_info->next));
-    printf("Player %u begins\n", game_info->next);
+    printf("Player %hhu begins\n", game_info->next);
  	
+    printf("Enter cards for player 0\n");
 	for ( int i = 0; i < 12; i++ ) {
 	    CardId c;
 	    char input[3];
@@ -77,50 +83,54 @@ void init( GameInfo* game_info, CardInfo* card_info ) {
         printf("Got card '%s'\n", card_names[c]);
 
 		game_info->player_cardsets[0] += CARDSHIFT(c);
-		if ( c == CLUB_QUEEN ) {
-			game_info->player_isre[0] = true;
-		}
 	}
 
-	card_info->cards_left = 0;
+    /* initialize card_info */
+    for ( p = 0; p < 3; p++ ) {
+        card_info->player_left[p] = 12;
+    }
+
 	CardSet set = game_info->player_cardsets[0];
-	for ( int i = 0; i < 24; i++ ) {
-		switch ( set % 4 ) {
+    card_info->cards_left = 0;
+	for ( uint8_t c = 0; c < 24; c++ ) {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wimplicit-fallthrough"
+		switch ( (set >> 2*c) & 0x3 ) {
 			case 0:
-				card_info->scores[0][card_info->cards_left] = 1.0/3.0;
-				card_info->scores[1][card_info->cards_left] = 1.0/3.0;
-				card_info->scores[2][card_info->cards_left] = 1.0/3.0;
-				card_info->ids[card_info->cards_left] = i;
+                for ( p = 0; p < 3; p++ ) {
+				    card_info->scores[card_info->cards_left][p] = 5;
+                }
+				card_info->ids[card_info->cards_left] = c;
 				card_info->cards_left += 1;
 			case 1:
-				card_info->scores[0][card_info->cards_left] = 1.0/3.0;
-				card_info->scores[1][card_info->cards_left] = 1.0/3.0;
-				card_info->scores[2][card_info->cards_left] = 1.0/3.0;
-				card_info->ids[card_info->cards_left] = i;
+                for ( p = 0; p < 3; p++ ) {
+				    card_info->scores[card_info->cards_left][p] = 5;
+                }
+				card_info->ids[card_info->cards_left] = c;
 				card_info->cards_left += 1;
 		}
-		set >>= 2;
+#pragma GCC diagnostic pop
 	}
-	card_info->one = card_info->cards_left;
-	card_info->sum[0] = 12.0;
-	card_info->sum[1] = 12.0;
-	card_info->sum[2] = 12.0;
+
+    /* perform checks */
 }	
 
-int main(int argc, char ** argv) {
+int main(void) {
 	GameInfo g;
 	CardInfo c;
 	CardId card;
 	init(&g, &c);
 	while ( g.cards_left > 0 ) {
-		printf("Player %d plays\n", (int)g.next);
+		printf("Player %hhu plays\n", g.next);
 		if ( g.next == 0 ) {
 			card = GetBestCard(&g, &c);
 			printf("%s\n", card_names[card]);
 		} else {
+            printf("Enter card\n");
 			char input[3];
 			scanf("%2s", input);
 			card = CardFromString(input);
+            printf("Got card '%s'\n", card_names[card]);
 		}
 		ExecuteMove( &g, &c, card );
 	}

@@ -14,7 +14,7 @@ void print_log(log_level_t level, const char * fmt, ...) {
                 break;
             case LOG_WARNING:
                 fprintf(stderr, "[WARNING] ");
-                break
+                break;
             case LOG_ERROR:
                 fprintf(stderr, "[ERROR]   ");
                 break;
