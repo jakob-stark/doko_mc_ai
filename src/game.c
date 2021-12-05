@@ -7,6 +7,9 @@
 #include <sys/sysinfo.h>
 
 #include "game.h"
+#include "core.h"
+#include "mc.h"
+#include "log.h"
 
 /** @brief holds all data a worker thread needs
  */
@@ -32,7 +35,7 @@ typedef struct {
  * 	@param arg pointer to data structure holding all relevant data and return data fields
  * 	@return returns NULL, returned data is in result field of WorkerData struct
  */
-void * WorkerRoutine( worker_data_t * arg ) {
+int * WorkerRoutine( worker_data_t * arg ) {
  	#define NSIM 100
 
     /* get a copy of the game_info and card_info structs,
@@ -42,7 +45,6 @@ void * WorkerRoutine( worker_data_t * arg ) {
     /* calculate absolute goal time */
 	arg->time_goal += clock();
 
-	uint32_t j = 0;
 	while ( clock() < arg->time_goal && arg->stop == 0 ) {
         /* get a fresh copy of the game info */
         game_info = *(arg->game_info);
@@ -52,9 +54,9 @@ void * WorkerRoutine( worker_data_t * arg ) {
         arg->mc_sample_calls++;
 
         /* simulate a game for each legal card and collect the results */
-        for ( uint8_t c = 0; c < legal_cards_len; c++ ) {
+        for ( uint8_t c = 0; c < arg->legal_cards_len; c++ ) {
             GameInfo game_info_copy = game_info;
-            arg->result[c] += Simulate(&game_info_copy, arg->legal_cards[c], &arg->random_seed);
+            arg->results[c] += Simulate(&game_info_copy, arg->legal_cards[c], &arg->random_seed);
             arg->simulate_calls++;
 		}
 	}
@@ -69,10 +71,10 @@ void * WorkerRoutine( worker_data_t * arg ) {
  */
 CardId GetBestCard( const GameInfo* game_info, const CardInfo* card_info ) {
     /* get a copy of the card info */
-    CardInfo card_info = *card_info;
+    CardInfo card_info_copy = *card_info;
 
 	/* prepare card_info by sorting it */
-    sort_and_check(&card_info);
+    sort_and_check(&card_info_copy);
 
     /* get legal cards for next move */
 	CardId legal_cards[12];
@@ -93,7 +95,7 @@ CardId GetBestCard( const GameInfo* game_info, const CardInfo* card_info ) {
 		thread_args[thread_i].legal_cards = legal_cards;
 		thread_args[thread_i].legal_cards_len = legal_cards_len;
 		thread_args[thread_i].game_info = game_info;
-		thread_args[thread_i].card_info = card_info;
+		thread_args[thread_i].card_info = &card_info_copy;
         /* initialize options */
         thread_args[thread_i].stop = 0;
 		thread_args[thread_i].time_goal = 1*CLOCKS_PER_SEC;
@@ -107,27 +109,33 @@ CardId GetBestCard( const GameInfo* game_info, const CardInfo* card_info ) {
 
 		/* start the worker */
         thrd_create(&thread_args[thread_i].thread_id,
-                    (thread_start_t)&WorkerRoutine, &thread_args[thread_i]);
+                    (int * (*)(void *))&WorkerRoutine, &thread_args[thread_i]);
 	}
-    ??? continue here
 	
 	/* join worker threads */
-	for ( thread_i = 0; thread_i < thread_num; thread_i++ ) {
-		pthread_join( thread_args[thread_i].thread, NULL );
-		for ( card_list_i = 0; card_list_i < card_list_len; card_list_i++ ) {
-		   card_scores[card_list_i] += 	thread_args[thread_i].result[card_list_i];
+    uint32_t mc_sample_calls = 0, simulate_calls = 0;
+	for ( uint8_t thread_i = 0; thread_i < thread_num; thread_i++ ) {
+		thrd_join(thread_args[thread_i].thread_id, NULL);
+		for ( uint8_t c = 0; c < legal_cards_len; c++ ) {
+		   results[c] += thread_args[thread_i].results[c];
+           mc_sample_calls += thread_args[thread_i].mc_sample_calls;
+           simulate_calls += thread_args[thread_i].simulate_calls;
 		}
 	}
 
 	/* find best card in card list */
 	uint32_t max_score = 0;
 	CardId max_id;
-	for ( card_list_i = 0; card_list_i < card_list_len; card_list_i++ ) {
-		if ( card_scores[card_list_i] > max_score ) {
-			max_score = card_scores[card_list_i];
-			max_id = card_list[card_list_i];
+	for ( uint8_t c = 0; c < legal_cards_len; c++ ) {
+		if ( results[c] > max_score ) {
+			max_score = results[c];
+			max_id = legal_cards[c];
 		}
 	}
+    log(LOG_INFO, "Simulated %lu games during %lu samplings)",
+            simulate_calls, mc_sample_calls);
+    log(LOG_INFO, "%.2f points expected for %s",
+            (double)max_score/(double)simulate_calls, card_names_long[max_id]);
 	return max_id;
 }
 

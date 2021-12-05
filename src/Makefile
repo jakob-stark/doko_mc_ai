@@ -1,7 +1,7 @@
 CC-FLAGS = -std=c11 -g -Wall -Wextra -fpic
 LD-FLAGS = -g
 
-main.ex: main.o game.o
+main.ex: main.o game.o log.o mc.o core.o random.o
 	gcc $(LD-FLAGS) -o $@ $^
 
 test.ex: test.o mc.o random.o
