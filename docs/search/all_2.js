@@ -18,7 +18,10 @@ var searchData=
   ['club_5fnine_15',['CLUB_NINE',['../group__core.html#ggadf764cbdea00d65edcd07bb9953ad2b7a70e3e7932806c330feb313a04090e8bd',1,'simulate.h']]],
   ['club_5fqueen_16',['CLUB_QUEEN',['../group__core.html#ggadf764cbdea00d65edcd07bb9953ad2b7a0e0e6424f1788df32db971c89d3558c0',1,'simulate.h']]],
   ['club_5ften_17',['CLUB_TEN',['../group__core.html#ggadf764cbdea00d65edcd07bb9953ad2b7a1482a58e44bddd27d0c9df6bc0f6aed8',1,'simulate.h']]],
-  ['core_18',['core',['../group__core.html',1,'']]],
-  ['core_2ec_19',['core.c',['../core_8c.html',1,'']]],
-  ['core_2eh_20',['core.h',['../core_8h.html',1,'']]]
+  ['computer_5fplayer_5fhand_18',['computer_player_hand',['../group__analysis.html#a78b6c14050a407af8ca9686c7fc43685',1,'InputInfo']]],
+  ['computer_5fplayer_5fhand_5flen_19',['computer_player_hand_len',['../group__analysis.html#abc92e2bae65bf45d19980a37da4aa8b6',1,'InputInfo']]],
+  ['computer_5fplayer_5fid_20',['computer_player_id',['../group__analysis.html#ab1e0fc1d4a21ae8f6ac5871b1a032eec',1,'InputInfo']]],
+  ['core_21',['core',['../group__core.html',1,'']]],
+  ['core_2ec_22',['core.c',['../core_8c.html',1,'']]],
+  ['core_2eh_23',['core.h',['../core_8h.html',1,'']]]
 ];

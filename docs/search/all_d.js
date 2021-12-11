@@ -13,5 +13,6 @@ var searchData=
   ['spade_5fnine_10',['SPADE_NINE',['../group__core.html#ggadf764cbdea00d65edcd07bb9953ad2b7a835cc5d5b0eff969b54d0d07bf410bda',1,'simulate.h']]],
   ['spade_5fqueen_11',['SPADE_QUEEN',['../group__core.html#ggadf764cbdea00d65edcd07bb9953ad2b7a78969a23ad92f88899cd20c5adc83163',1,'simulate.h']]],
   ['spade_5ften_12',['SPADE_TEN',['../group__core.html#ggadf764cbdea00d65edcd07bb9953ad2b7ad8e283879d67f90099225039e6f3e213',1,'simulate.h']]],
-  ['suit_13',['Suit',['../group__core.html#gaf925439f9b67c22277c6d7a4b2fdc2a0',1,'simulate.h']]]
+  ['starting_5fplayer_5fid_13',['starting_player_id',['../group__analysis.html#a6db9453d56e9448384cabdb332289914',1,'InputInfo']]],
+  ['suit_14',['Suit',['../group__core.html#gaf925439f9b67c22277c6d7a4b2fdc2a0',1,'simulate.h']]]
 ];
