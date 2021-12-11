@@ -3,6 +3,13 @@
 
 #include "simulate.h"
 
+/** @defgroup mc mc
+ *
+ *   This monte carlo module contains functions to randomlu distribute the
+ *   remaining cards to the other players
+ * @{
+ */
+
 /**
  * @brief Structure to hold all information about unknown cards
  */
@@ -43,6 +50,8 @@ int sort_and_check( CardInfo* card_info );
  *      and RandomInt
  */
 void mc_sample( GameInfo* dest, const CardInfo* card_info, uint32_t* random_state );
+
+/**@}*/
 
 #endif
 

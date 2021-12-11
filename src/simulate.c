@@ -43,13 +43,7 @@ static const CardSet suit_sets[6] = {
 	0x0000fffffffffffful
 };
 
-/** @brief Simulates a random game
- *
- * @param game_info pointer to GameInfo struct to simulate
- * @param random_state pointer to 32bit random state used by Random and RandomInt
- * @return Score value for player 0
- */
- Score Simulate( const GameInfo* game_info_in, CardId next_card, uint32_t* random_state ) {
+Score Simulate( const GameInfo* game_info_in, CardId next_card, uint32_t* random_state ) {
     Score result;
 	PlayerId p;
     GameInfo game_info;
@@ -79,12 +73,6 @@ static const CardSet suit_sets[6] = {
 }
 
 
-/** @brief get legal cards for next player
- *
- *  @param game_info pointer to the GameInfo object to get the legal cards from
- *  @param legal_cards pointer to array where the result is stored
- *  @return number of legal cards found and stored in legal_cards
- */
 uint8_t GetLegalCards( const GameInfo* game_info, CardId legal_cards[12] ) {
     CardSet legal_card_set;
     uint8_t legal_cards_len;
@@ -114,12 +102,6 @@ uint8_t GetLegalCards( const GameInfo* game_info, CardId legal_cards[12] ) {
 }
     
 
-/** @brief performs a card play
- *
- *  @param game_info pointer to GameInfo struct to operate on. Will not be preserved!
- *  @param card Id of card to play. Will not check for consistency. If the next player
- *  			does not hold this card, the behaviour is undefined.
- */
 void PlayCard( GameInfo* game_info, CardId card ) {
 	/* remove card from players hand */
 	game_info->player_cardsets[game_info->next] -= CARDSHIFT(card);
