@@ -47,6 +47,9 @@ doxygen description of what it does and how it is used in the header file. The
 source file on the other hand should contain detailed comments (non-doxygen)
 that explain, how it is done.
 
+The generated documentation is published at the
+[project github io page](https://jakob-stark.github.io/doko_mc_ai/).
+
 ## TODO
 
 The following topics need improvements and you are welcome to contribute.
