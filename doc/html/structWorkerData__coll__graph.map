@@ -1,0 +1,5 @@
+<map id="WorkerData" name="WorkerData">
+<area shape="rect" id="node1" title="holds all data a worker thread needs" alt="" coords="70,124,169,151"/>
+<area shape="rect" id="node2" href="$structGameInfo.html" title=" " alt="" coords="5,5,92,32"/>
+<area shape="rect" id="node3" href="$structCardInfo.html" title="Structure to hold all information about unknown cards." alt="" coords="151,5,229,32"/>
+</map>

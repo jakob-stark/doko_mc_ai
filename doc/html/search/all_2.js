@@ -1,0 +1,24 @@
+var searchData=
+[
+  ['card_5fnames_0',['card_names',['../group__core.html#gac5791037ff4ce9d0260c9b614ecd7c48',1,'card_names():&#160;simulate.c'],['../group__core.html#gac5791037ff4ce9d0260c9b614ecd7c48',1,'card_names():&#160;simulate.c']]],
+  ['card_5fnames_5flong_1',['card_names_long',['../group__core.html#gaae39ab065820baed2023fcd417b8db24',1,'card_names_long():&#160;simulate.c'],['../group__core.html#gaae39ab065820baed2023fcd417b8db24',1,'card_names_long():&#160;simulate.c']]],
+  ['card_5fvalid_2',['CARD_VALID',['../group__core.html#ga88cab89f319e08828d01bd922fc8adc1',1,'simulate.h']]],
+  ['cardfromstring_3',['CardFromString',['../main_8c.html#a5eb32a98eae423fccabde8f4a0b1404b',1,'main.c']]],
+  ['cardid_4',['CardId',['../group__core.html#gaf59deae6382138769d10a59e1b92bd9d',1,'simulate.h']]],
+  ['cardinfo_5',['CardInfo',['../group__mc.html#structCardInfo',1,'']]],
+  ['cards_5fleft_6',['cards_left',['../group__core.html#a122fa923309830a4c6ef427d72d28aba',1,'GameInfo::cards_left()'],['../group__mc.html#afc8642b549935abe5c62b4056ea39bbb',1,'CardInfo::cards_left()']]],
+  ['cardset_7',['CardSet',['../group__core.html#gaeb6b6e692a9bcb9879382452ce90c94a',1,'simulate.h']]],
+  ['cardshift_8',['CARDSHIFT',['../group__core.html#ga1bb57c8441eb5a6aef666c21f7ee3a93',1,'simulate.h']]],
+  ['ci_9',['ci',['../test_8c.html#a0d768a5a5548590e6c9261bb05ca43b4',1,'test.c']]],
+  ['ci1_10',['ci1',['../test_8c.html#a5019f4320a2ce0c10846cbb8bce46ad7',1,'test.c']]],
+  ['club_11',['CLUB',['../group__core.html#gga06fc87d81c62e9abb8790b6e5713c55bac25cb3585b367833c9129f36fb70ed2e',1,'simulate.h']]],
+  ['club_5face_12',['CLUB_ACE',['../group__core.html#ggadf764cbdea00d65edcd07bb9953ad2b7a89b6352406ef9a83d183679ffe3b93df',1,'simulate.h']]],
+  ['club_5fjack_13',['CLUB_JACK',['../group__core.html#ggadf764cbdea00d65edcd07bb9953ad2b7a815747957ac83f97b81433e5b6cdd827',1,'simulate.h']]],
+  ['club_5fking_14',['CLUB_KING',['../group__core.html#ggadf764cbdea00d65edcd07bb9953ad2b7a0799bcbe4c675c97197f253d8b962096',1,'simulate.h']]],
+  ['club_5fnine_15',['CLUB_NINE',['../group__core.html#ggadf764cbdea00d65edcd07bb9953ad2b7a70e3e7932806c330feb313a04090e8bd',1,'simulate.h']]],
+  ['club_5fqueen_16',['CLUB_QUEEN',['../group__core.html#ggadf764cbdea00d65edcd07bb9953ad2b7a0e0e6424f1788df32db971c89d3558c0',1,'simulate.h']]],
+  ['club_5ften_17',['CLUB_TEN',['../group__core.html#ggadf764cbdea00d65edcd07bb9953ad2b7a1482a58e44bddd27d0c9df6bc0f6aed8',1,'simulate.h']]],
+  ['core_18',['core',['../group__core.html',1,'']]],
+  ['core_2ec_19',['core.c',['../core_8c.html',1,'']]],
+  ['core_2eh_20',['core.h',['../core_8h.html',1,'']]]
+];

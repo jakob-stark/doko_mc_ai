@@ -1,5 +1,6 @@
 main
-doc/
+/doc/*
+!/doc/html
 *.pdf
 *.o
 *.swp
