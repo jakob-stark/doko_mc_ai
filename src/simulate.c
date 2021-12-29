@@ -86,17 +86,11 @@ uint8_t GetLegalCards( const GameInfo* game_info, CardId legal_cards[12] ) {
     legal_cards_len = 0;
     legal_card_id = 0;
     while ( legal_card_set != 0 ) {
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wimplicit-fallthrough"
-        switch ( legal_card_set % 4 ) {
-            case 2:
-                legal_cards[legal_cards_len++] = legal_card_id;
-            case 1:
-                legal_cards[legal_cards_len++] = legal_card_id;
+        if ( legal_card_set & 1 ) {
+            legal_cards[legal_cards_len++] = legal_card_id;
         }
-#pragma GCC diagnostic pop
         legal_card_id++;
-        legal_card_set >>= 2;
+        legal_card_set >>= 1;
     }
     return legal_cards_len;
 }
@@ -104,26 +98,27 @@ uint8_t GetLegalCards( const GameInfo* game_info, CardId legal_cards[12] ) {
 
 void PlayCard( GameInfo* game_info, CardId card ) {
 	/* remove card from players hand */
-	game_info->player_cardsets[game_info->next] -= CARDSHIFT(card);
+	game_info->player_cardsets[game_info->next] &= ~CARDSHIFT(card);
 	--(game_info->cards_left);
 
     /* add player to re if the club queen is played */
-    if ( card == CLUB_QUEEN ) {
+    if ( card/2 == CLUB_QUEEN_L/2 ) {
         game_info->player_isre[game_info->next] = true;
     }
 
 	/* add value to score */
-	game_info->trickscore += card_values[card];
+	game_info->trickscore += card_values[card/2];
 
 	if ( game_info->tricksuit == NOSUIT ) {
 		/* no card on trick */
-		game_info->tricksuit = card_suits[card];
+		game_info->tricksuit = card_suits[card/2];
 		game_info->trickwinnercard = card;
 		game_info->trickwinner = game_info->next;
 	} else {
 		/* test if new card is winning */
-		if ( card_suits[card] == game_info->tricksuit || card_suits[card] == TRUMP ) {
-			if ( card > game_info->trickwinnercard || ( card == HEART_TEN && game_info->cards_left > 4 ) ) {
+		if ( card_suits[card/2] == game_info->tricksuit || card_suits[card/2] == TRUMP ) {
+			if ( card/2 > game_info->trickwinnercard/2 ||
+                    ( card/2 == HEART_TEN_L/2 && game_info->cards_left > 4 ) ) {
 				game_info->trickwinnercard = card;
 				game_info->trickwinner = game_info->next;
 			}

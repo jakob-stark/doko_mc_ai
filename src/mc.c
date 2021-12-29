@@ -92,7 +92,7 @@ void mc_sample( GameInfo* dest, const CardInfo* card_info, uint32_t* random_stat
         r = RandomC(random_state, random[3]);
         for ( p = 0; p < 3; p++ ) {
             if ( /*random[p] <= r &&*/ r < random[p+1] ) {
-                dest->player_cardsets[p+1] += CARDSHIFT(ci.ids[c]);
+                dest->player_cardsets[p+1] |= CARDSHIFT(ci.ids[c]);
                 ci.player_left[p]--;
                 break;
             }
