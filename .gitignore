@@ -5,4 +5,5 @@ main
 *.o
 *.swp
 *.swo
+*.so
 *.ex

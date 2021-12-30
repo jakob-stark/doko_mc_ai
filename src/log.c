@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include "log.h"
 
-log_level_t log_level = LOG_INFO;
+log_level_t log_level = LOG_ERROR;
 
 void print_log(log_level_t level, const char * fmt, ...) {
     if ( level >= log_level ) {

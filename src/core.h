@@ -3,9 +3,9 @@
 
 #include "simulate.h"
 #include "mc.h"
+#include "analysis.h"
 
-CardId GetBestCard( const GameInfo* game_info, const CardInfo* card_info );
-void ExecuteMove( GameInfo* game_info, CardInfo* card_info, CardId card );
+CardId GetBestCard( const InputInfo* input );
 
 #endif
 

@@ -12,6 +12,7 @@
 #include "core.h"
 #include "mc.h"
 #include "log.h"
+#include "analysis.h"
 
 /** @brief holds all data a worker thread needs
  */
@@ -37,7 +38,7 @@ typedef struct {
  * 	@param arg pointer to data structure holding all relevant data and return data fields
  * 	@return returns NULL, returned data is in result field of WorkerData struct
  */
-int WorkerRoutine( worker_data_t * arg ) {
+static int WorkerRoutine( worker_data_t * arg ) {
  	#define NSIM 100
     #define ELAPSED ((finish.tv_sec - start.tv_sec) + 1.0e-9 * (finish.tv_nsec - start.tv_nsec))
 
@@ -77,18 +78,23 @@ int WorkerRoutine( worker_data_t * arg ) {
  *	@param card_info holds dat concerning the card distribution probabilities
  *	@return returns id of best card.
  */
-CardId GetBestCard( const GameInfo* game_info, const CardInfo* card_info ) {
-#define MULTITHREADED
-    /* get a copy of the card info */
-    CardInfo card_info_copy = *card_info;
+CardId GetBestCard( const InputInfo* input ) {
+//#define MULTITHREADED
+    GameInfo game_info;
+    CardInfo card_info;
+
+    /* convert input into game and card info */
+    if ( analyze(input, &game_info, &card_info) != 0 ) {
+        return INVALID;
+    }
 
 	/* prepare card_info by sorting it */
-    sort_and_check(&card_info_copy);
+    sort_and_check(&card_info);
 
     /* get legal cards for next move */
 	CardId legal_cards[12];
 	uint8_t legal_cards_len;
-    legal_cards_len = GetLegalCards(game_info, legal_cards);
+    legal_cards_len = GetLegalCards(&game_info, legal_cards);
 
     /* prepare the output */
 	uint32_t results[12] = {0};
@@ -107,8 +113,8 @@ CardId GetBestCard( const GameInfo* game_info, const CardInfo* card_info ) {
 		/* initialize parameters */
 		thread_args[thread_i].legal_cards = legal_cards;
 		thread_args[thread_i].legal_cards_len = legal_cards_len;
-		thread_args[thread_i].game_info = game_info;
-		thread_args[thread_i].card_info = &card_info_copy;
+		thread_args[thread_i].game_info = &game_info;
+		thread_args[thread_i].card_info = &card_info;
         /* initialize options */
         thread_args[thread_i].stop = 0;
 		thread_args[thread_i].time_goal = 1.;
@@ -150,7 +156,7 @@ CardId GetBestCard( const GameInfo* game_info, const CardInfo* card_info ) {
 	CardId max_id = 0;
 	for ( uint8_t c = 0; c < legal_cards_len; c++ ) {
         print_log(LOG_INFO, "%.2f points expected for %s",
-                (double)results[c]/(double)mc_sample_calls, card_names_long[legal_cards[c]]);
+                (double)results[c]/(double)mc_sample_calls, card_names_long[legal_cards[c]/2]);
 		if ( results[c] > max_score ) {
 			max_score = results[c];
 			max_id = legal_cards[c];
@@ -159,7 +165,7 @@ CardId GetBestCard( const GameInfo* game_info, const CardInfo* card_info ) {
     print_log(LOG_INFO, "Simulated %lu games during %lu samplings in %hhux%0.3f s",
             simulate_calls, mc_sample_calls, thread_num, total_time/thread_num);
     print_log(LOG_INFO, "%.2f points expected for %s",
-            (double)max_score/(double)mc_sample_calls, card_names_long[max_id]);
+            (double)max_score/(double)mc_sample_calls, card_names_long[max_id/2]);
 	return max_id;
 #undef MULTITHREADED
 }
