@@ -22,7 +22,7 @@ class InputInfo(Structure):
 
 cardnames = ('cn','ck','ct','ca','sn','sk','st','sa','hn','hk','ha','dn','dk','dt','da',
              'dj','hj','sj','cj','dq','hq','sq','cq','ht')
-cardvalues = (9,4,10,11,9,4,10,11,9,4,11,9,4,10,11,2,2,2,2,3,3,3,3,10)
+cardvalues = (0,4,10,11,0,4,10,11,0,4,11,0,4,10,11,2,2,2,2,3,3,3,3,10)
 cardsuits = (0,0,0,0,1,1,1,1,2,2,2,4,4,4,4,4,4,4,4,4,4,4,4,4)
 cconvertd = {k : i*2 for i, k in enumerate(cardnames)}
 rconvertd = { i*2 : k for i, k in enumerate(cardnames)}
@@ -35,8 +35,8 @@ class Doko:
         rd.shuffle(icards)
         self.played_cards = []
 
-        self.player_cards = [icards[i*12:(i+1)*12] for i in range(4)]
-        self.player_cardsn = [icards[i*12:(i+1)*12] for i in range(4)]
+        self.player_cards = [sorted(icards[i*12:(i+1)*12]) for i in range(4)]
+        self.player_cardsn = [sorted(icards[i*12:(i+1)*12]) for i in range(4)]
         self.player_scores = [0 for i in range(4)]
         self.player_isre = [44 in self.player_cards[i] or 45 in self.player_cards[i] for i in range(4)]
         self.cards_left = 48
@@ -55,6 +55,9 @@ class Doko:
 
     def play(self):
         card = self.get_card(self.next, 0, self.played_cards, self.player_cards[self.next])
+        if card >= 48:
+            print('error', self.next, self.played_cards, self.player_cards[self.next])
+            return False
 
         self.trick[self.next] = card
         self.player_cards[self.next].remove(card)
@@ -73,7 +76,10 @@ class Doko:
                     self.trickwinnercard = card
                     self.trickwinner = self.next
 
+
         if self.cards_left % 4 == 0:
+            self.update()
+            time.sleep(1.5)
             self.player_scores[self.trickwinner] += self.trickscore
             self.trickscore = 0
             self.trick = [None]*4
@@ -236,7 +242,11 @@ if __name__ == '__main__':
         doko.update()
         while doko.play():
             pass
+        print(doko.player_isre)
         print(doko.player_scores)
+        re = sum([x for i,x in enumerate(doko.player_scores) if doko.player_isre[i] == doko.player_isre[0]])
+        co = sum([x for i,x in enumerate(doko.player_scores) if doko.player_isre[i] != doko.player_isre[0]])
+        print('your score {}, enemy score {}'.format(re,co))
 
 
     t = threading.Thread(target=mainloop)
