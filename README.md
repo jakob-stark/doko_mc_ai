@@ -5,13 +5,13 @@ of 'Doppelkopf'.
 
 ## How to compile it
 
-Up to date, there is no platform independent build system. On a GNU/Linux
-system you should be able to build and start the main program with the
-following commands if you have a recent GCC compiler installed
+The project uses CMake for configuring and compilation. On a GNU/Linux system you should be able to build the project
+with the following commands if you have a CMake and a recent C compiler installed.
 
-    $ cd src
-    $ make main.ex
-    $ ./main
+    $ mkdir build
+    $ cd build
+    $ cmake .. -DCMAKE_BUILD_TYPE=Release
+    $ cmake --build .
 
 ## Source overview
 
@@ -66,10 +66,3 @@ The following topics need improvements and you are welcome to contribute.
     protocol (perhaps json based) would be nice. This would enable a server
     client model, where different uis could act as clients and get the best
     next moves from a core server, that performs the calculations.
- 
-  - A platform independent build system would be much appreciated. Examples
-    of such build systems are CMake or Meson. The whole project is written
-    in almost platform independent c11 code. There are however small portions
-    that are GNU/Linux specific, most notable the time measurement as well
-    as the detection of the number of cpu cores. The multithreading uses
-    c11 threads, and requires a compiler, that supports them.
