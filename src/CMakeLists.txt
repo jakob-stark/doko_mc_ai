@@ -1,0 +1,10 @@
+add_executable(main
+    main.c
+    core.c
+    ab.c
+    analysis.c
+    log.c
+    mc.c
+    random.c
+    simulate.c
+)

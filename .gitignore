@@ -1,10 +1,7 @@
 main
+/build
 /doc/*
 !/doc/html
 *.pdf
-*.o
 *.swp
 *.swo
-*.so
-*.ex
-EwigeListe

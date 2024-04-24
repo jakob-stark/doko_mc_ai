@@ -42,11 +42,14 @@ GameInfo t_game_info_2 = {
     .trickwinner     = 0
 };
 
+void print_table_usage(void);
+
 int main(void) {
     GameInfo game_info = t_game_info_2;
 
-    Score score = AlphaBetaEvaluate(&game_info, HEART_QUEEN_L, 120, 121);
+    Score score = AlphaBetaEvaluate(&game_info, CLUB_QUEEN_H, 0, 240);
     printf("score %hhu\n", score);
-    
-	return 0;
+    print_table_usage();
+
+    return 0;
 }
