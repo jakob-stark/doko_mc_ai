@@ -11,10 +11,10 @@
  */
 
 typedef enum {
-    LOG_DEBUG   = 10,
-    LOG_INFO    = 20,
+    LOG_DEBUG = 10,
+    LOG_INFO = 20,
     LOG_WARNING = 30,
-    LOG_ERROR   = 40
+    LOG_ERROR = 40
 } log_level_t;
 
 /** @brief global log_level */
@@ -30,7 +30,7 @@ extern log_level_t log_level;
  * @param fmt a format string in the printf style
  * @param ... format string parameters
  */
-void print_log(log_level_t level, const char * fmt, ...);
+void print_log(log_level_t level, char const* fmt, ...);
 
 /**@}*/
 

@@ -3,6 +3,7 @@
 
 #include "simulate.h"
 
-Score AlphaBetaEvaluate(const GameInfo* game_info_in, CardId next_card, Score alpha, Score beta);
+Score AlphaBetaEvaluate(GameInfo const* game_info_in, CardId next_card,
+                        Score alpha, Score beta);
 
-#endif//AB_H
+#endif // AB_H

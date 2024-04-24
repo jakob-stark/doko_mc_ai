@@ -1,92 +1,87 @@
+#include <stdbool.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdio.h>
-#include <stdbool.h>
 
 #include <pthread.h>
 #include <sys/sysinfo.h>
 
-#include "simulate.h"
 #include "random.h"
+#include "simulate.h"
 
-const char * const card_names[25] = {
-	"cn", "ck", "ct", "ca", "sn", "sk", "st", "sa", "hn", "hk", "ha",
-	"dn", "dk", "dt", "da", "dj", "hj", "sj", "cj", "dq", "hq", "sq", "cq", "ht", "ic"
-};
+char const* const card_names[25] = {"cn", "ck", "ct", "ca", "sn", "sk", "st",
+                                    "sa", "hn", "hk", "ha", "dn", "dk", "dt",
+                                    "da", "dj", "hj", "sj", "cj", "dq", "hq",
+                                    "sq", "cq", "ht", "ic"};
 
-const char * const card_names_long[25] = {
-    "club nine", "club king", "club ten", "club ace",
-    "spade nine", "spade king", "spade ten", "spade ace",
-    "heard nine", "heart king", "heart ace",
-    "diamond nine", "diamond king", "diamond ten", "diamond ace",
-    "diamond jack", "heart jack", "spade jack", "club jack",
-    "diamond queen", "heart queen", "spade queen", "club queen",
-    "heart ten", "invalid"
-};
+char const* const card_names_long[25] = {
+    "club nine",    "club king",   "club ten",    "club ace",
+    "spade nine",   "spade king",  "spade ten",   "spade ace",
+    "heard nine",   "heart king",  "heart ace",   "diamond nine",
+    "diamond king", "diamond ten", "diamond ace", "diamond jack",
+    "heart jack",   "spade jack",  "club jack",   "diamond queen",
+    "heart queen",  "spade queen", "club queen",  "heart ten",
+    "invalid"};
 
-static const Score card_values[25] = {
-	0, 4, 10, 11, 0, 4, 10, 11, 0, 4, 11, 0, 4, 10, 11,	2, 2, 2, 2, 3, 3, 3, 3, 10, 0
-};
+static const Score card_values[25] = {0, 4,  10, 11, 0,  4,  10, 11, 0,
+                                      4, 11, 0,  4,  10, 11, 2,  2,  2,
+                                      2, 3,  3,  3,  3,  10, 0};
 
 static const Suit card_suits[25] = {
-	CLUB, CLUB, CLUB, CLUB, SPADE, SPADE, SPADE, SPADE, HEART, HEART, HEART,
-	TRUMP, TRUMP, TRUMP, TRUMP, TRUMP, TRUMP, TRUMP, TRUMP, TRUMP, TRUMP, TRUMP, TRUMP, TRUMP,
-    NOSUIT
-};
+    CLUB,  CLUB,  CLUB,  CLUB,  SPADE, SPADE, SPADE, SPADE, HEART,
+    HEART, HEART, TRUMP, TRUMP, TRUMP, TRUMP, TRUMP, TRUMP, TRUMP,
+    TRUMP, TRUMP, TRUMP, TRUMP, TRUMP, TRUMP, NOSUIT};
 
 static const CardSet suit_sets[6] = {
-	0x00000000000000fful,
-	0x000000000000ff00ul,
-	0x00000000003f0000ul,
-	0x0000000000000000ul,
-	0x0000ffffffc00000ul,
-	0x0000fffffffffffful
-};
+    0x00000000000000fful, 0x000000000000ff00ul, 0x00000000003f0000ul,
+    0x0000000000000000ul, 0x0000ffffffc00000ul, 0x0000fffffffffffful};
 
-Score Simulate( const GameInfo* game_info_in, CardId next_card, uint32_t* random_state ) {
+Score Simulate(GameInfo const* game_info_in, CardId next_card,
+               uint32_t* random_state) {
     Score result;
-	PlayerId p;
+    PlayerId p;
     GameInfo game_info;
-	CardId legal_cards[12];
-	uint8_t legal_cards_len;
+    CardId legal_cards[12];
+    uint8_t legal_cards_len;
 
     /* get a copy of the game_info and play the first card on it */
     game_info = *game_info_in;
     PlayCard(&game_info, next_card);
-	
-    while ( game_info.cards_left > 0 ) {
-		/* determine legal cards to play */
+
+    while (game_info.cards_left > 0) {
+        /* determine legal cards to play */
         legal_cards_len = GetLegalCards(&game_info, legal_cards);
-		/* determine random legal card and play it */
+        /* determine random legal card and play it */
         next_card = legal_cards[RandomC(random_state, legal_cards_len)];
-		PlayCard(&game_info, next_card);
-	}
-	
+        PlayCard(&game_info, next_card);
+    }
+
     /* return score for party of player 0 */
     result = 0;
-	for ( p = 0; p < 4; p++ ) {
-		if ( game_info.player_isre[p] == game_info.player_isre[0] ) {
-			result += game_info.player_scores[p];
-		}
-	}
-	return result;
+    for (p = 0; p < 4; p++) {
+        if (game_info.player_isre[p] == game_info.player_isre[0]) {
+            result += game_info.player_scores[p];
+        }
+    }
+    return result;
 }
 
-
-uint8_t GetLegalCards( const GameInfo* game_info, CardId legal_cards[12] ) {
+uint8_t GetLegalCards(GameInfo const* game_info, CardId legal_cards[12]) {
     CardSet legal_card_set;
     uint8_t legal_cards_len;
     uint8_t legal_card_id;
     /* determine legal cards to play */
-    legal_card_set = game_info->player_cardsets[game_info->next] & suit_sets[game_info->tricksuit];
-    if ( legal_card_set == 0 ) {
-        /* if no card is legal, the player may choose freely which card to play */
+    legal_card_set = game_info->player_cardsets[game_info->next] &
+                     suit_sets[game_info->tricksuit];
+    if (legal_card_set == 0) {
+        /* if no card is legal, the player may choose freely which card to play
+         */
         legal_card_set = game_info->player_cardsets[game_info->next];
     }
     legal_cards_len = 0;
     legal_card_id = 0;
-    while ( legal_card_set != 0 ) {
-        if ( legal_card_set & 1 ) {
+    while (legal_card_set != 0) {
+        if (legal_card_set & 1) {
             legal_cards[legal_cards_len++] = legal_card_id;
         }
         legal_card_id++;
@@ -94,45 +89,45 @@ uint8_t GetLegalCards( const GameInfo* game_info, CardId legal_cards[12] ) {
     }
     return legal_cards_len;
 }
-    
 
-void PlayCard( GameInfo* game_info, CardId card ) {
-	/* remove card from players hand */
-	game_info->player_cardsets[game_info->next] &= ~CARDSHIFT(card);
-	--(game_info->cards_left);
+void PlayCard(GameInfo* game_info, CardId card) {
+    /* remove card from players hand */
+    game_info->player_cardsets[game_info->next] &= ~CARDSHIFT(card);
+    --(game_info->cards_left);
 
     /* add player to re if the club queen is played */
-    if ( card/2 == CLUB_QUEEN_L/2 ) {
+    if (card / 2 == CLUB_QUEEN_L / 2) {
         game_info->player_isre[game_info->next] = true;
     }
 
-	/* add value to score */
-	game_info->trickscore += card_values[card/2];
+    /* add value to score */
+    game_info->trickscore += card_values[card / 2];
 
-	if ( game_info->tricksuit == NOSUIT ) {
-		/* no card on trick */
-		game_info->tricksuit = card_suits[card/2];
-		game_info->trickwinnercard = card;
-		game_info->trickwinner = game_info->next;
-	} else {
-		/* test if new card is winning */
-		if ( card_suits[card/2] == game_info->tricksuit || card_suits[card/2] == TRUMP ) {
-			if ( card/2 > game_info->trickwinnercard/2 ||
-                    ( card/2 == HEART_TEN_L/2 && game_info->cards_left > 4 ) ) {
-				game_info->trickwinnercard = card;
-				game_info->trickwinner = game_info->next;
-			}
-		}
-	}
+    if (game_info->tricksuit == NOSUIT) {
+        /* no card on trick */
+        game_info->tricksuit = card_suits[card / 2];
+        game_info->trickwinnercard = card;
+        game_info->trickwinner = game_info->next;
+    } else {
+        /* test if new card is winning */
+        if (card_suits[card / 2] == game_info->tricksuit ||
+            card_suits[card / 2] == TRUMP) {
+            if (card / 2 > game_info->trickwinnercard / 2 ||
+                (card / 2 == HEART_TEN_L / 2 && game_info->cards_left > 4)) {
+                game_info->trickwinnercard = card;
+                game_info->trickwinner = game_info->next;
+            }
+        }
+    }
 
-	/* test if trick is full */
-	if ( game_info->cards_left % 4 == 0 ) {
-		game_info->player_scores[game_info->trickwinner] += game_info->trickscore;
-		game_info->trickscore = 0;
-		game_info->tricksuit = NOSUIT;
-		game_info->next = game_info->trickwinner;
-	} else {
-		game_info->next = (game_info->next + 1) % 4;
-	}
+    /* test if trick is full */
+    if (game_info->cards_left % 4 == 0) {
+        game_info->player_scores[game_info->trickwinner] +=
+            game_info->trickscore;
+        game_info->trickscore = 0;
+        game_info->tricksuit = NOSUIT;
+        game_info->next = game_info->trickwinner;
+    } else {
+        game_info->next = (game_info->next + 1) % 4;
+    }
 }
-

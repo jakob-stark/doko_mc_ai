@@ -15,12 +15,12 @@
  */
 typedef struct {
     /* these are the facts */
-	uint8_t cards_left;     /**< total number of card left in the game */
+    uint8_t cards_left;     /**< total number of card left in the game */
     uint8_t player_left[3]; /**< how many cards each player has left */
 
-	CardId ids[36];         /**< the ids of the cards left in the game */
-	uint8_t scores[36][3];  /**< how likely is it that each player has each
-                                 card. Values are 0,3,4 or 5 */
+    CardId ids[36];        /**< the ids of the cards left in the game */
+    uint8_t scores[36][3]; /**< how likely is it that each player has each
+                            card. Values are 0,3,4 or 5 */
 } CardInfo;
 
 /** @brief prepares the card_info structure
@@ -33,7 +33,7 @@ typedef struct {
  *  @return 0 on sucesss, a nonzero value if the card_info struct is
  *      inconsistent
  */
-int sort_and_check( CardInfo* card_info );
+int sort_and_check(CardInfo* card_info);
 
 /** @brief Samples card distribution
  *
@@ -49,9 +49,9 @@ int sort_and_check( CardInfo* card_info );
  *  @param random_state pointer to 32bit value used as random state by Random
  *      and RandomInt
  */
-void mc_sample( GameInfo* dest, const CardInfo* card_info, uint32_t* random_state );
+void mc_sample(GameInfo* dest, CardInfo const* card_info,
+               uint32_t* random_state);
 
 /**@}*/
 
 #endif
-

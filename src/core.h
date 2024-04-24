@@ -1,11 +1,10 @@
 #ifndef GAME_H
 #define GAME_H
 
-#include "simulate.h"
-#include "mc.h"
 #include "analysis.h"
+#include "mc.h"
+#include "simulate.h"
 
-CardId GetBestCard( const InputInfo* input );
+CardId GetBestCard(InputInfo const* input);
 
 #endif
-
