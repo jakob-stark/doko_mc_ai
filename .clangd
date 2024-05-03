@@ -1,0 +1,14 @@
+Diagnostics:
+  ClangTidy:
+    Add:
+      - "modernize*"
+      - "cppcoreguidelines*"
+      - "misc*"
+      - "performance*"
+      - "readability*"
+    Remove:
+      - "*-use-trailing-return-type"
+      - "*-redundant-access-specifiers"
+      - "*-magic-numbers"
+      - "*-identifier-length"
+      - "*-non-private-member-variables-in-classes"
