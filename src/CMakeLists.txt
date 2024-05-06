@@ -1,10 +1,10 @@
-add_executable(main
-    main.c
-    core.c
-    ab.c
+add_executable(ares
+    ares.cpp
+
     analysis.c
-    log.c
     mc.c
     random.c
     simulate.c
 )
+
+target_link_libraries(ares protocol)
