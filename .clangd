@@ -12,3 +12,6 @@ Diagnostics:
       - "*-magic-numbers"
       - "*-identifier-length"
       - "*-non-private-member-variables-in-classes"
+      - "*-uppercase-literal-suffix"
+      - "*-use-nodiscard"
+      - "*-special-member-functions"

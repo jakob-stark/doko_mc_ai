@@ -1,4 +1,5 @@
 #include "interface.hpp"
+#include "error.hpp"
 
 #include <boost/describe.hpp>
 #include <boost/json.hpp>
@@ -20,22 +21,18 @@ std::optional<std::string> read_line() {
     return line;
 }
 
-struct rpc_exception {
-    int code;
-    std::string message;
-    std::string data;
-
-    void write_error(json::value const& id = nullptr) const {
-        std::cerr << "error: " << message << ": " << data << '\n';
-        std::cout << boost::json::value{
-            {"jsonrpc", "2.0"},
-            {"id", id},
-            {"error", code},
-            {"message", message},
-            {"data", data},
+void write_error(rpc_exception const& ex, json::value const& id = nullptr) {
+    std::cerr << "error: " << ex.ec.message() << ": " << ex.data << '\n';
+    std::cout << boost::json::value{
+        {"jsonrpc", "2.0"},
+        {"id", id},
+        {"error", {
+            {"code", ex.ec.value()},
+            {"message", ex.ec.message()},
+            {"data", ex.data},
+        }},
         } << '\n';
-    }
-};
+}
 
 void write_result(json::value&& result, json::value const& id) {
     std::cout << json::value{
@@ -49,11 +46,11 @@ json::object parse(std::string const& line) {
     boost::system::error_code ec{};
     auto input = boost::json::parse(line, ec);
     if (ec) {
-        throw rpc_exception{-32700, "parse error", ec.message()};
+        throw rpc_exception{rpc_code_t::parse_error, ec.message()};
     }
 
     if (not input.is_object()) {
-        throw rpc_exception{-32600, "invalid request", "not a json object"};
+        throw rpc_exception{rpc_code_t::invalid_request, "not a json object"};
     }
 
     return std::move(input).get_object();
@@ -62,10 +59,11 @@ json::object parse(std::string const& line) {
 void check_jsonrpc(json::object const& input) {
     auto const* jsonrpc = input.if_contains("jsonrpc");
     if (jsonrpc == nullptr) {
-        throw rpc_exception{-32600, "invalid request", "jsonrpc field missing"};
+        throw rpc_exception{rpc_code_t::invalid_request,
+                            "jsonrpc field missing"};
     }
     if (*jsonrpc != "2.0") {
-        throw rpc_exception{-32600, "invalid request",
+        throw rpc_exception{rpc_code_t::invalid_request,
                             "jsonrpc must be \"2.0\""};
     }
 }
@@ -76,7 +74,7 @@ json::value check_id(json::object const& input) {
         std::cerr << "warning: ignoring notification" << '\n';
     }
     if (id->is_object() or id->is_array()) {
-        throw rpc_exception{-32600, "invalid request",
+        throw rpc_exception{rpc_code_t::invalid_request,
                             "id must be string, number, or null"};
     }
     return *id;
@@ -85,10 +83,12 @@ json::value check_id(json::object const& input) {
 std::string get_method(json::object const& input) {
     auto const* method = input.if_contains("method");
     if (method == nullptr) {
-        throw rpc_exception{-32600, "invalid request", "method field missing"};
+        throw rpc_exception{rpc_code_t::invalid_request,
+                            "method field missing"};
     }
     if (not method->is_string()) {
-        throw rpc_exception{-32600, "invalid request", "method must be string"};
+        throw rpc_exception{rpc_code_t::invalid_request,
+                            "method must be string"};
     }
     return json::value_to<std::string>(*method);
 }
@@ -97,21 +97,46 @@ template <typename T>
 T get_param(json::object const& input, std::string_view key) {
     auto const* params = input.if_contains("params");
     if (params == nullptr) {
-        throw rpc_exception{-32602, "invalid params", "params field missing"};
+        throw rpc_exception{rpc_code_t::invalid_params, "params field missing"};
     }
     if (not params->is_object()) {
-        throw rpc_exception{-32602, "invalid params", "params must be object"};
+        throw rpc_exception{rpc_code_t::invalid_params,
+                            "params must be object"};
     }
     auto const* param = params->get_object().if_contains(key);
     if (param == nullptr) {
-        throw rpc_exception{-32602, "invalid params", "parameter missing"};
+        throw rpc_exception{rpc_code_t::invalid_params, "parameter missing"};
     }
     try {
         return json::value_to<T>(*param);
     } catch (...) {
-        throw rpc_exception{-32602, "invalid params", "parameter wrong type"};
+        throw rpc_exception{rpc_code_t::invalid_params, "parameter wrong type"};
     }
 }
+
+// template <class C>
+// boost::json::value call(C& c, boost::string_view method,
+//                         boost::json::array const& args) {
+//     using Fd =
+//         boost::describe::describe_members<C, boost::describe::mod_public |
+//                                                  boost::describe::mod_function>;
+//
+//     bool found = false;
+//     boost::json::value result;
+//
+//     boost::mp11::mp_for_each<Fd>([&](auto D) {
+//         if (!found && method == D.name) {
+//             result = call_impl(c, D.pointer, args);
+//             found = true;
+//         }
+//     });
+//
+//     if (!found) {
+//         throw std::invalid_argument("Invalid method name");
+//     }
+//
+//     return result;
+// }
 
 } // namespace
 
@@ -125,6 +150,9 @@ BOOST_DESCRIBE_ENUM(game_t, normal, dismiss, wedding, poverty, grand_solo,
 
 BOOST_DESCRIBE_STRUCT(card_t, (), (suit, value))
 BOOST_DESCRIBE_STRUCT(move_t, (), (card, calls))
+
+BOOST_DESCRIBE_STRUCT(agent_if, (),
+                      (initialize, start, get_announcement, do_move, get_move))
 
 calls_t tag_invoke(json::value_to_tag<calls_t> /*tag*/, json::value const& v) {
     unsigned calls{};
@@ -145,7 +173,7 @@ void tag_invoke(json::value_from_tag /*tag*/, json::value& v, calls_t calls) {
     v = std::move(r);
 }
 
-int run(Client& client) {
+int run(agent_if& client) {
     for (;;) {
         json::value jsonrpc_id = nullptr;
         try {
@@ -166,23 +194,24 @@ int run(Client& client) {
                 client.initialize(
                     get_param<player_t>(input, "computer_player"),
                     get_param<player_t>(input, "starting_player"),
-                    get_param<std::array<card_t, 10>>(input, "cards"));
+                    get_param<std::array<card_t, 12>>(input, "cards"));
             } else if (method == "get_announcement") {
                 result = json::value_from(client.get_announcement());
             } else if (method == "start") {
                 client.start(get_param<game_t>(input, "game"),
                              get_param<player_t>(input, "starting_player"));
             } else if (method == "do_move") {
-                client.do_move(get_param<player_t>(input, "player"),
-                               get_param<move_t>(input, "move"));
+                result = json::value_from(
+                    client.do_move(get_param<player_t>(input, "player"),
+                                   get_param<move_t>(input, "move")));
             } else if (method == "get_move") {
                 result = json::value_from(client.get_move());
             } else {
-                throw rpc_exception{-32601, "method not found", method};
+                throw rpc_exception{rpc_code_t::method_not_found, method};
             }
             write_result(std::move(result), jsonrpc_id);
         } catch (rpc_exception const& ex) {
-            ex.write_error(jsonrpc_id);
+            write_error(ex, jsonrpc_id);
         }
     }
     return 0;

@@ -3,6 +3,8 @@
 
 #include <array>
 #include <string>
+#include <system_error>
+#include <utility>
 
 namespace doko::protocol {
 
@@ -67,29 +69,47 @@ struct move_t {
     calls_t calls;
 };
 
-struct Client {
-  protected:
-    ~Client() = default;
-    Client() = default;
+} // namespace doko::protocol
 
-    Client(Client const&) = default;
-    Client(Client&&) = default;
-    Client& operator=(Client const&) = default;
-    Client& operator=(Client&&) = default;
+namespace doko::protocol {
 
-  public:
+struct agent_if {
     virtual void initialize(player_t computer_player, player_t starting_player,
-                            std::array<card_t, 10> cards) = 0;
+                            std::array<card_t, 12> cards) = 0;
 
     virtual game_t get_announcement() = 0;
     virtual void start(game_t game, player_t starting_player) = 0;
 
-    virtual void do_move(player_t player, move_t move) = 0;
+    virtual player_t do_move(player_t player, move_t move) = 0;
     virtual move_t get_move() = 0;
+
+  protected:
+    ~agent_if() = default;
 };
 
-int run(Client& client);
+struct rpc_exception {
+    std::error_code ec;
+    std::string data;
+
+    rpc_exception(std::error_code ec, std::string data)
+        : ec{ec}, data{std::move(data)} {}
+};
+
+enum class app_code_t {
+    not_implemented = -20000,
+    gameplay_error = -20100,
+};
+
+std::error_code make_error_code(app_code_t ev);
+
+int run(agent_if& client);
 
 } // namespace doko::protocol
+
+namespace std {
+template <>
+struct is_error_code_enum<doko::protocol::app_code_t> : true_type {};
+
+} // namespace std
 
 #endif
