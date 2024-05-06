@@ -42,7 +42,7 @@ int sort_and_check(CardInfo* card_info);
  *  copy them.
  *
  *  @param dest Destination GameInfo object. Will only add cards to the
- *      cardsets of players 1-3. So	this can be used with an initialized
+ *      cardsets of players 1-3. So this can be used with an initialized
  *      GameInfo object where the remaining card will be filled in.
  *  @param card_info Information about which cards are to be dealed and with
  *      which scores.

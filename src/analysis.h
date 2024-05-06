@@ -47,6 +47,12 @@ typedef struct {
  */
 int analyze(InputInfo const* input, GameInfo* game_info, CardInfo* card_info);
 
+int analysis_start(GameInfo* game_info, CardInfo* card_info,
+                   PlayerId computer_player_id, PlayerId starting_player_id,
+                   CardId const cards[12]);
+int analysis_move(GameInfo* game_info, CardInfo* card_info,
+                  PlayerId computer_player_id, PlayerId player_id, CardId card);
+
 /**@}*/
 
 #endif
