@@ -5,3 +5,6 @@ main
 *.pdf
 *.swp
 *.swo
+.cache
+compile_commands.json
+*/__pycache__
