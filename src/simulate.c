@@ -53,9 +53,8 @@ static CardSet const suit_sets[6] = {
 
 Score Simulate(GameInfo const* game_info_in, CardId next_card,
                uint32_t* random_state) {
-    GameInfo game_info;
     /* get a copy of the game_info and play the first card on it */
-    game_info = *game_info_in;
+    GameInfo game_info = *game_info_in;
     PlayCard(&game_info, next_card);
 
     CardId legal_cards[12];
@@ -138,16 +137,4 @@ void PlayCard(GameInfo* game_info, CardId card) {
     } else {
         game_info->next = (game_info->next + 1) % 4;
     }
-}
-
-void Initialize(GameInfo* game_info) {
-    for (PlayerId p = 0; p < 4; p++) {
-        game_info->player_cardsets[p] = 0UL;
-        game_info->player_scores[p] = 0;
-        game_info->player_isre[p] = false;
-    }
-    game_info->cards_left = 48;
-    game_info->next = 0;
-    game_info->trickscore = 0;
-    game_info->tricksuit = NOSUIT;
 }

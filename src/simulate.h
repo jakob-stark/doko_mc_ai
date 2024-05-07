@@ -134,8 +134,6 @@ void PlayCard(GameInfo* game_info, CardId card);
 Score Simulate(GameInfo const* game_info, CardId next_card,
                uint32_t* random_state);
 
-void Initialize(GameInfo* game_info);
-
 /**@}*/
 
 #endif

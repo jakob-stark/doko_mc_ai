@@ -188,6 +188,7 @@ int analysis_move(GameInfo* game_info, CardInfo* card_info,
     /* check if the player if the actual next player */
     if (player != game_info->next) {
         /* not that players turn */
+        fprintf(stderr, "wrong players turn\n");
         return -1;
     }
 
@@ -201,6 +202,7 @@ int analysis_move(GameInfo* game_info, CardInfo* card_info,
             PlayCard(game_info, card + 1);
             return 0;
         }
+        fprintf(stderr, "card not in my hand: %s\n", card_names_long[card]);
         // card not in hand
     } else {
         /* check if the card if still available and if yes if high or low */
@@ -222,7 +224,40 @@ int analysis_move(GameInfo* game_info, CardInfo* card_info,
                 return 0;
             }
         }
-        // card not found
+        fprintf(stderr, "card already played too often: %s\n", card_names_long[card]);
     }
     return -1;
+}
+
+int analysis_finish(GameInfo const* game_info, int* points) {
+    Score re_score = 0;
+    uint8_t re_count = 0;
+    for (PlayerId p = 0; p < 4; p++) {
+        if (game_info->player_isre[p]) {
+            re_score += game_info->player_scores[p];
+            re_count++;
+        }
+    }
+    int re_points = +(re_score == 240)  // black
+                    + (re_score >= 210) // no 30
+                    + (re_score >= 180) // no 60
+                    + (re_score >= 150) // no 90
+                    + (re_score > 120)  // > won
+                    - (re_score <= 120) // lost against contra
+                    - (re_score < 120)  // < lost
+                    - (re_score < 90)   // no 90
+                    - (re_score < 60)   // no 60
+                    - (re_score < 30)   // no 30
+                    - (re_score == 0)   // black
+        ;
+    if (game_info->player_isre[0]) {
+        if (re_count == 1) {
+            *points = re_points * 3;
+        } else {
+            *points = re_points;
+        }
+    } else {
+        *points = -re_points;
+    }
+    return 0;
 }
