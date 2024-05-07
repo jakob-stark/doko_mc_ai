@@ -23,6 +23,7 @@ class Agent:
             target=self.pull_logs
         )
         self.logger_thread.start()
+        self.name = self.call('get_name')
         return self
 
     def __exit__(self, *args):

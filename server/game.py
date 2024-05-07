@@ -2,6 +2,8 @@ import random
 import logging
 import contextlib
 
+import protocol
+
 
 logger = logging.getLogger(__name__)
 
@@ -36,54 +38,71 @@ def get_rank(card):
 
 
 class Game:
-    def __init__(self, agents):
-        assert len(agents) == 4
-        self.agents = {
-            'player{}'.format(i+1): agent for i, agent in enumerate(agents)
-        }
+    def __init__(self, args):
+        self.args = args
 
     def run(self):
         with contextlib.ExitStack() as stack:
-            # deal the cards
-            cards = list(generate_cards())
-            random.shuffle(cards)
-
             # initialize the agents
-            for i, (player, agent) in enumerate(self.agents.items()):
-                stack.enter_context(agent)
-                agent.call(
-                    'initialize',
-                    computer_player=player,
-                    starting_player='player1',
-                    cards=[
-                        {'suit': suit, 'value': value}
-                        for suit, value in cards[12*i:12*(i+1)]
-                    ],
-                )
-            logger.info('initialization done')
+            team1 = [
+                stack.enter_context(protocol.Agent(self.args.agent1, 'agent1')),
+                stack.enter_context(protocol.Agent(self.args.agent1, 'agent2')),
+            ]
+            team2 = [
+                stack.enter_context(protocol.Agent(self.args.agent2, 'agent3')),
+                stack.enter_context(protocol.Agent(self.args.agent2, 'agent4')),
+            ]
 
-            for agent in self.agents.values():
-                agent.call(
-                    'start',
-                    game='normal',
-                    starting_player='player1',
-                )
-            logger.info('agents started')
+            cards = list(generate_cards())
+            agents = [*team1, *team2]
+            for agent in agents:
+                agent.points = 0
 
-            self.current_player = 'player1'
-            for i in range(48):
-                if i % 4 == 0:
-                    logger.info('--- trick {} ---'.format(i // 4))
-                agent = self.agents[self.current_player]
-                move = agent.call(
-                    'get_move',
-                )
-                logger.info('{} plays {}'.format(self.current_player, move['card']))
-                next_player = [
+            for n in range(self.args.number):
+                random.shuffle(cards)
+                # random.shuffle(agents)
+
+                for i, agent in enumerate(agents):
                     agent.call(
-                        'do_move',
-                        player=self.current_player,
-                        move=move
-                    ) for agent in self.agents.values()
-                ]
-                self.current_player = next_player[0]
+                        'initialize',
+                        computer_player='player{}'.format(i+1),
+                        starting_player='player1',
+                        cards=[
+                            {'suit': suit, 'value': value}
+                            for suit, value in cards[12*i:12*(i+1)]
+                        ],
+                    )
+                logger.info('initialization done')
+
+                for agent in agents:
+                    agent.call(
+                        'start',
+                        game='normal',
+                        starting_player='player1',
+                    )
+                logger.info('agents started')
+
+                current_player = 0
+                for i in range(48):
+                    if i % 4 == 0:
+                        logger.info('--- trick {} ---'.format(i // 4))
+                    move = agents[current_player].call('get_move')
+                    logger.info('player{} plays {}'.format(current_player + 1, move['card']))
+                    next_player = [
+                        agent.call(
+                            'do_move',
+                            player='player{}'.format(current_player + 1),
+                            move=move
+                        ) for agent in agents
+                    ]
+                    current_player = int(next_player[0][-1:])-1
+
+                for agent in agents:
+                    agent.points += agent.call('finish')
+
+            # calculate results
+            for team in (team1, team2):
+                points = sum(agent.points for agent in team)
+                name = team[0].name
+                print('team {} makes {} points in {} matches'.format(name, points, self.args.number))
+
