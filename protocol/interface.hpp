@@ -74,6 +74,8 @@ struct move_t {
 namespace doko::protocol {
 
 struct agent_if {
+    virtual std::string get_name() = 0;
+
     virtual void initialize(player_t computer_player, player_t starting_player,
                             std::array<card_t, 12> cards) = 0;
 
@@ -82,6 +84,8 @@ struct agent_if {
 
     virtual player_t do_move(player_t player, move_t move) = 0;
     virtual move_t get_move() = 0;
+
+    virtual int finish() = 0;
 
   protected:
     ~agent_if() = default;
@@ -98,11 +102,12 @@ struct rpc_exception {
 enum class app_code_t {
     not_implemented = -20000,
     gameplay_error = -20100,
+    conversion_failed = -20201,
 };
 
 std::error_code make_error_code(app_code_t ev);
 
-int run(agent_if& client);
+int run(agent_if& agent);
 
 } // namespace doko::protocol
 

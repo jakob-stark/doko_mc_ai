@@ -114,30 +114,6 @@ T get_param(json::object const& input, std::string_view key) {
     }
 }
 
-// template <class C>
-// boost::json::value call(C& c, boost::string_view method,
-//                         boost::json::array const& args) {
-//     using Fd =
-//         boost::describe::describe_members<C, boost::describe::mod_public |
-//                                                  boost::describe::mod_function>;
-//
-//     bool found = false;
-//     boost::json::value result;
-//
-//     boost::mp11::mp_for_each<Fd>([&](auto D) {
-//         if (!found && method == D.name) {
-//             result = call_impl(c, D.pointer, args);
-//             found = true;
-//         }
-//     });
-//
-//     if (!found) {
-//         throw std::invalid_argument("Invalid method name");
-//     }
-//
-//     return result;
-// }
-
 } // namespace
 
 BOOST_DESCRIBE_ENUM(player_t, player1, player2, player3, player4)
@@ -150,9 +126,6 @@ BOOST_DESCRIBE_ENUM(game_t, normal, dismiss, wedding, poverty, grand_solo,
 
 BOOST_DESCRIBE_STRUCT(card_t, (), (suit, value))
 BOOST_DESCRIBE_STRUCT(move_t, (), (card, calls))
-
-BOOST_DESCRIBE_STRUCT(agent_if, (),
-                      (initialize, start, get_announcement, do_move, get_move))
 
 calls_t tag_invoke(json::value_to_tag<calls_t> /*tag*/, json::value const& v) {
     unsigned calls{};
@@ -173,7 +146,8 @@ void tag_invoke(json::value_from_tag /*tag*/, json::value& v, calls_t calls) {
     v = std::move(r);
 }
 
-int run(agent_if& client) {
+
+int run(agent_if& agent) {
     for (;;) {
         json::value jsonrpc_id = nullptr;
         try {
@@ -191,21 +165,25 @@ int run(agent_if& client) {
 
             json::value result = nullptr;
             if (method == "initialize") {
-                client.initialize(
+                agent.initialize(
                     get_param<player_t>(input, "computer_player"),
                     get_param<player_t>(input, "starting_player"),
                     get_param<std::array<card_t, 12>>(input, "cards"));
             } else if (method == "get_announcement") {
-                result = json::value_from(client.get_announcement());
+                result = json::value_from(agent.get_announcement());
             } else if (method == "start") {
-                client.start(get_param<game_t>(input, "game"),
+                agent.start(get_param<game_t>(input, "game"),
                              get_param<player_t>(input, "starting_player"));
             } else if (method == "do_move") {
                 result = json::value_from(
-                    client.do_move(get_param<player_t>(input, "player"),
+                    agent.do_move(get_param<player_t>(input, "player"),
                                    get_param<move_t>(input, "move")));
             } else if (method == "get_move") {
-                result = json::value_from(client.get_move());
+                result = json::value_from(agent.get_move());
+            } else if (method == "get_name") {
+                result = json::value_from(agent.get_name());
+            } else if (method == "finish") {
+                result = json::value_from(agent.finish());
             } else {
                 throw rpc_exception{rpc_code_t::method_not_found, method};
             }

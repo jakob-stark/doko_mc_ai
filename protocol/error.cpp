@@ -32,7 +32,7 @@ std::error_code make_error_code(rpc_code_t ev) {
     return {static_cast<int>(ev), category};
 }
 
-BOOST_DESCRIBE_ENUM(app_code_t, not_implemented, gameplay_error)
+BOOST_DESCRIBE_ENUM(app_code_t, not_implemented, gameplay_error, conversion_failed)
 
 std::error_code make_error_code(app_code_t ev) {
     static described_category_t<app_code_t> const category{};
