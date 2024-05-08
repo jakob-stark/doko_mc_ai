@@ -171,6 +171,21 @@ doko_score_t doko_simulate(doko_game_info_t const* game_info,
                            doko_card_t next_card,
                            doko_random_state_t* random_state);
 
+/**
+ * @brief simulates a random game
+ *
+ * This does the same as \ref doko_simulate with the difference, that it
+ *
+ *   a) does modify the passed game_info object
+ *   b) does not play a deterministic first card
+ *   c) does not return a pre calculated score
+ *
+ * Use this function instead of \ref doko_simulate if you need to calculate
+ * the score yourself or you need some additionaly game state information.
+ */
+void doko_simulate_v2(doko_game_info_t* game_info,
+                      doko_random_state_t* random_state);
+
 /**@}*/
 
 #endif

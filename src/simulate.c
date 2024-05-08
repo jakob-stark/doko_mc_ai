@@ -45,6 +45,21 @@ static doko_cardset_t const suit_sets[6] = {
     0x0000000000000000ul, 0x0000ffffffc00000ul, 0x0000fffffffffffful,
 };
 
+static void simulate(doko_game_info_t* game_info,
+                     doko_random_state_t* random_state) {
+    while (game_info->cards_left > 0) {
+        /* determine legal cards to play */
+        doko_card_t legal_cards[12];
+        doko_count_t legal_cards_len =
+            doko_get_legal_cards(game_info, legal_cards);
+
+        /* get a random legal card and play it */
+        doko_card_t next_card =
+            legal_cards[doko_random_uint8(random_state, legal_cards_len)];
+        doko_play_card(game_info, next_card);
+    }
+}
+
 doko_score_t doko_simulate(doko_game_info_t const* game_info_in,
                            doko_card_t next_card,
                            doko_random_state_t* random_state) {
@@ -52,16 +67,8 @@ doko_score_t doko_simulate(doko_game_info_t const* game_info_in,
     doko_game_info_t game_info = *game_info_in;
     doko_play_card(&game_info, next_card);
 
-    doko_card_t legal_cards[12];
-    while (game_info.cards_left > 0) {
-        /* determine legal cards to play */
-        doko_count_t legal_cards_len =
-            doko_get_legal_cards(&game_info, legal_cards);
-        /* determine random legal card and play it */
-        next_card =
-            legal_cards[doko_random_uint8(random_state, legal_cards_len)];
-        doko_play_card(&game_info, next_card);
-    }
+    /* do the simulation */
+    simulate(&game_info, random_state);
 
     /* return score for party of player 0 */
     doko_score_t result = 0;
@@ -71,6 +78,11 @@ doko_score_t doko_simulate(doko_game_info_t const* game_info_in,
         }
     }
     return result;
+}
+
+void doko_simulate_v2(doko_game_info_t* game_info,
+                      doko_random_state_t* random_state) {
+    simulate(game_info, random_state);
 }
 
 static doko_cardset_t get_legal_cardset(doko_game_info_t const* game_info) {
