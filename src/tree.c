@@ -22,6 +22,9 @@ struct doko_tree_node_t {
 
     /** the card that was played to get here */
     doko_card_t card;
+
+    /** the player that play's the next card */
+    doko_player_t next_player;
 };
 typedef struct doko_tree_node_t doko_tree_node_t;
 
@@ -40,10 +43,13 @@ static float ucb1(float playouts, float available, float score,
 }
 
 /** @brief select a child node based on ucb1 */
-doko_tree_node_t* doko_select_and_expand(doko_tree_node_t* root,
+void doko_select_and_expand(doko_tree_node_t* root,
                                          doko_game_info_t* game_info,
                                          doko_random_state_t* random_state) {
     for (doko_tree_node_t* node = root;;) {
+        /* increase the playout counter */
+        node->playouts++;
+
         /* find legal moves and check if any of them are still untried, that is
          * no child node exists for them */
         doko_cardset_t legal_cardset = doko_get_legal_cardset(game_info);
@@ -62,6 +68,9 @@ doko_tree_node_t* doko_select_and_expand(doko_tree_node_t* root,
             doko_tree_node_t* new_node = tree_allocate_node();
             assert(new_node != nullptr);
 
+            /* play out the card */
+            doko_play_card(game_info, chosen_card);
+
             /* initialize the new node */
             new_node->parent = node;
             new_node->next_sibling = node->first_child;
@@ -71,15 +80,30 @@ doko_tree_node_t* doko_select_and_expand(doko_tree_node_t* root,
             new_node->available = 1;
             new_node->score = 0;
             new_node->card = chosen_card;
+            new_node->next_player = game_info->next;
 
             /* insert the new node as the first child of the current node */
             node->first_child = new_node;
             node->child_cardset |= DOKO_CARDSHIFT(chosen_card);
 
-            /* play out the card */
-            doko_play_card(game_info, chosen_card);
+            /* mcts simulation */
+            doko_simulate_v2(game_info, random_state);
 
-            return new_node;
+            /* mcts backpropagation */
+
+            /* calculate the scores */
+            doko_score_t scores[2] = {0, 0};
+            DOKO_FOR_EACH_PLAYER(p) {
+                scores[game_info->player_isre[p]] +=
+                    game_info->player_scores[p];
+            }
+
+            /* backpropagate */
+            for ( node = new_node; node->parent != nullptr; node = node->parent ) {
+                node->score += scores[game_info->player_isre[node->next_player]];
+            }
+
+            return;
         }
 
         /* select the next child based on the maximal ucb1 value */
