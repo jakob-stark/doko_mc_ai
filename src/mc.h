@@ -10,18 +10,26 @@
  * @{
  */
 
+enum {
+    IMPOSSIBLE = 0,
+    UNLIKELY = 3,
+    DUNNO = 4,
+    LIKELY = 5,
+};
+typedef uint8_t doko_likeliness_t;
+
 /**
  * @brief Structure to hold all information about unknown cards
  */
 typedef struct {
     /* these are the facts */
-    uint8_t cards_left;     /**< total number of card left in the game */
-    uint8_t player_left[3]; /**< how many cards each player has left */
+    doko_count_t cards_left;     /**< total number of card left in the game */
+    doko_count_t player_left[3]; /**< how many cards each player has left */
 
-    CardId ids[36];        /**< the ids of the cards left in the game */
-    uint8_t scores[36][3]; /**< how likely is it that each player has each
-                            card. Values are 0,3,4 or 5 */
-} CardInfo;
+    doko_card_t ids[36];        /**< the ids of the cards left in the game */
+    doko_likeliness_t likeliness[36][3]; /**< how likely is it that each player has each
+                                   card. Values are 0,3,4 or 5 */
+} doko_card_info_t;
 
 /** @brief prepares the card_info structure
  *
@@ -33,7 +41,7 @@ typedef struct {
  *  @return 0 on sucesss, a nonzero value if the card_info struct is
  *      inconsistent
  */
-int sort_and_check(CardInfo* card_info);
+int doko_sort_and_check(doko_card_info_t* card_info);
 
 /** @brief Samples card distribution
  *
@@ -46,11 +54,11 @@ int sort_and_check(CardInfo* card_info);
  *      GameInfo object where the remaining card will be filled in.
  *  @param card_info Information about which cards are to be dealed and with
  *      which scores.
- *  @param random_state pointer to 32bit value used as random state by Random
- *      and RandomInt
+ *  @param random_state pointer to 32bit value used as random state by the
+ *      random generator
  */
-void mc_sample(GameInfo* dest, CardInfo const* card_info,
-               uint32_t* random_state);
+void doko_mc_sample(doko_game_info_t* dest, doko_card_info_t const* card_info,
+                    doko_random_state_t* random_state);
 
 /**@}*/
 

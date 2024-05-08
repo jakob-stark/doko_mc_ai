@@ -14,7 +14,7 @@ namespace doko::convert {
 
 using namespace protocol;
 
-inline PlayerId player(player_t const& player) {
+inline doko_player_t player(player_t const& player) {
     switch (player) {
     case player1:
         return 0;
@@ -28,7 +28,7 @@ inline PlayerId player(player_t const& player) {
     throw rpc_exception{app_code_t::conversion_failed, "invalid player_t"};
 }
 
-inline player_t player_r(PlayerId player) {
+inline player_t player_r(doko_player_t player) {
     switch (player) {
     case 0:
         return player1;
@@ -42,7 +42,7 @@ inline player_t player_r(PlayerId player) {
     throw rpc_exception{app_code_t::conversion_failed, "invalid PlayerId"};
 }
 
-inline CardId card(card_t const& card) {
+inline doko_card_t card(card_t const& card) {
     switch (card.suit) {
     case diamond:
         switch (card.value) {
@@ -108,7 +108,7 @@ inline CardId card(card_t const& card) {
     throw rpc_exception{app_code_t::conversion_failed, "invalid card_t"};
 }
 
-inline card_t card_r(CardId card) {
+inline card_t card_r(doko_card_t card) {
     switch (card) {
     case CLUB_NINE_L:
     case CLUB_NINE_H:
@@ -194,12 +194,15 @@ inline card_t card_r(CardId card) {
 namespace doko::random {
 
 struct RandomGenerator {
+    static_assert(std::is_same_v<doko_random_state_t, uint32_t>);
+    static_assert(std::is_same_v<doko_random_bits_t, uint32_t>);
+
     using result_type = uint32_t;
 
     static constexpr result_type max() { return UINT32_MAX; }
     static constexpr result_type min() { return 0; }
 
-    result_type operator()() { return random_bits(&state); }
+    result_type operator()() { return doko_random_bits(&state); }
 
     result_type state{1};
 };
@@ -209,12 +212,12 @@ struct RandomGenerator {
 namespace doko::protocol {
 
 struct BasicAgent : doko::protocol::agent_if {
-    PlayerId computer_player_id{};
-    PlayerId starting_player_id{};
-    std::array<CardId, 12> computer_player_cards{};
+    doko_player_t computer_player_id{};
+    doko_player_t starting_player_id{};
+    std::array<doko_card_t, 12> computer_player_cards{};
 
-    GameInfo game_info{};
-    CardInfo card_info{};
+    doko_game_info_t game_info{};
+    doko_card_info_t card_info{};
 
     random::RandomGenerator rnd{};
 
@@ -237,17 +240,17 @@ struct BasicAgent : doko::protocol::agent_if {
         }
 
         starting_player_id = convert::player(starting_player);
-        if (analysis_start(&game_info, &card_info, computer_player_id,
-                           starting_player_id,
-                           computer_player_cards.data()) != 0) {
+        if (doko_analysis_start(&game_info, &card_info, computer_player_id,
+                                starting_player_id,
+                                computer_player_cards.data()) != 0) {
             throw rpc_exception{app_code_t::gameplay_error, "analysis_start"};
         }
     };
 
     player_t do_move(player_t player, move_t move) final {
-        if (analysis_move(&game_info, &card_info, computer_player_id,
-                          convert::player(player),
-                          convert::card(move.card)) != 0) {
+        if (doko_analysis_move(&game_info, &card_info, computer_player_id,
+                               convert::player(player),
+                               convert::card(move.card)) != 0) {
             throw rpc_exception{app_code_t::gameplay_error, "analysis_move"};
         }
         return convert::player_r((game_info.next + computer_player_id) % 4);
@@ -255,7 +258,7 @@ struct BasicAgent : doko::protocol::agent_if {
 
     int finish() final {
         int points{};
-        if (analysis_finish(&game_info, &points) != 0) {
+        if (doko_analysis_finish(&game_info, &points) != 0) {
             throw rpc_exception{app_code_t::gameplay_error, "analysis_finish"};
         }
         return points;

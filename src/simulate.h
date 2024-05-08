@@ -4,6 +4,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "random.h"
+
 /** @defgroup core core
  *
  *   The core module
@@ -15,7 +17,7 @@
  */
 
 enum { CLUB = 0, SPADE = 1, HEART = 2, DIAMOND = 3, TRUMP = 4, NOSUIT = 5 };
-typedef uint8_t Suit;
+typedef uint8_t doko_suit_t;
 
 enum {
     CLUB_NINE_L = 0,
@@ -68,35 +70,39 @@ enum {
     HEART_TEN_H = 47,
     INVALID = 48
 };
-typedef uint8_t CardId;
-#define CARDSHIFT(card) (1ul << (card))
-#define CARD_VALID(card) ((card) < INVALID)
-#define CARD_EQUAL(card1, card2) ((card1) / 2 == (card2) / 2)
+typedef uint8_t doko_card_t;
+#define DOKO_CARDSHIFT(card) (1ul << (card))
+#define DOKO_CARD_VALID(card) ((card) < INVALID)
+#define DOKO_CARD_EQUAL(card1, card2) ((card1) / 2 == (card2) / 2)
 
-typedef uint8_t Score;
-typedef uint8_t PlayerId;
-typedef uint64_t CardSet;
+typedef uint8_t doko_score_t;
+typedef uint8_t doko_count_t;
+
+typedef uint8_t doko_player_t;
+#define DOKO_FOR_EACH_PLAYER(x) for (doko_player_t x = 0; x < 4; x++)
+
+typedef uint64_t doko_cardset_t;
 
 typedef struct {
-    CardSet player_cardsets[4];
-    Score player_scores[4];
+    doko_cardset_t player_cardsets[4];
+    doko_score_t player_scores[4];
     bool player_isre[4];
-    uint8_t cards_left;
+    doko_count_t cards_left;
 
-    PlayerId next;
+    doko_player_t next;
 
-    Score trickscore;
-    Suit tricksuit;
-    CardId trickwinnercard;
-    PlayerId trickwinner;
-} GameInfo;
+    doko_score_t trickscore;
+    doko_suit_t tricksuit;
+    doko_card_t trickwinnercard;
+    doko_player_t trickwinner;
+} doko_game_info_t;
 
 /** @brief short 2 byte card name abbreviations as null terminated strings
  *         (indexed by CardId) */
-extern char const* const card_names[25];
+extern char const* const doko_card_names[25];
 
 /** @brief long card names as null terminated strings (indexed by CardId) */
-extern char const* const card_names_long[25];
+extern char const* const doko_card_names_long[25];
 
 /** @brief get legal cards for next player
  *
@@ -104,7 +110,18 @@ extern char const* const card_names_long[25];
  *  @param legal_cards pointer to array where the result is stored
  *  @return number of legal cards found and stored in legal_cards
  */
-uint8_t GetLegalCards(GameInfo const* game_info, CardId legal_cards[12]);
+doko_count_t doko_get_legal_cards(doko_game_info_t const* game_info,
+                                  doko_card_t legal_cards[12]);
+
+/** @brief get legal cards for next player
+ *
+ * this does the same calculations than @ref doko_get_legal_cards but returns
+ * the result as cardset.
+ *
+ * @param game_info game info object to perform action on
+ * @return a cardset containing the legal cards
+ */
+doko_cardset_t doko_get_legal_cardset(doko_game_info_t const* game_info);
 
 /** @brief performs a card play
  *
@@ -113,7 +130,7 @@ uint8_t GetLegalCards(GameInfo const* game_info, CardId legal_cards[12]);
  *  @param card Id of card to play. Will not check for consistency. If the next
  *    player does not hold this card, the behaviour is undefined.
  */
-void PlayCard(GameInfo* game_info, CardId card);
+void doko_play_card(doko_game_info_t* game_info, doko_card_t card);
 
 /** @brief Simulates a random game
  *
@@ -131,8 +148,9 @@ void PlayCard(GameInfo* game_info, CardId card);
  *    RandomInt
  *  @return Score value for player 0
  */
-Score Simulate(GameInfo const* game_info, CardId next_card,
-               uint32_t* random_state);
+doko_score_t doko_simulate(doko_game_info_t const* game_info,
+                           doko_card_t next_card,
+                           doko_random_state_t* random_state);
 
 /**@}*/
 

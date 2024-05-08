@@ -12,7 +12,7 @@
  * variant is used, which should suffice for our mc sampling.
  */
 
-static uint32_t random(uint32_t* state) {
+static uint32_t doko_random(uint32_t* state) {
     uint32_t i = *state;
     i ^= i << 13;
     i ^= i >> 17;
@@ -20,12 +20,12 @@ static uint32_t random(uint32_t* state) {
     return *state = i;
 }
 
-float random_float(uint32_t* state) {
+float doko_random_float(doko_random_state_t* state) {
     union {
         uint32_t i;
         float f;
     } u;
-    u.i = random(state);
+    u.i = doko_random(state);
 
     /**
      * @note
@@ -49,11 +49,11 @@ float random_float(uint32_t* state) {
     return u.f - 1.0f;
 }
 
-uint8_t random_uint8(uint32_t* state, uint8_t a) {
-    uint32_t i = random(state);
+uint8_t doko_random_uint8(doko_random_state_t* state, uint8_t a) {
+    uint32_t i = doko_random(state);
     return i % a;
 }
 
-uint32_t random_bits(uint32_t* state) {
-    return random(state);
+doko_random_bits_t doko_random_bits(doko_random_state_t* state) {
+    return doko_random(state);
 }

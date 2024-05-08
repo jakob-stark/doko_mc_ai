@@ -1,12 +1,6 @@
-#include <stdbool.h>
-
-#include <pthread.h>
-#include <sys/sysinfo.h>
-
-#include "random.h"
 #include "simulate.h"
 
-char const* const card_names[25] = {
+char const* const doko_card_names[25] = {
     "cn", "ck", "ct", "ca", //
     "sn", "sk", "st", "sa", //
     "hn", "hk", "ha",       //
@@ -16,7 +10,7 @@ char const* const card_names[25] = {
     "ht", "ic",             //
 };
 
-char const* const card_names_long[25] = {
+char const* const doko_card_names_long[25] = {
     "club nine",     "club king",    "club ten",    "club ace",    //
     "spade nine",    "spade king",   "spade ten",   "spade ace",   //
     "heard nine",    "heart king",   "heart ace",                  //
@@ -26,7 +20,7 @@ char const* const card_names_long[25] = {
     "heart ten",     "invalid",                                    //
 };
 
-static Score const card_values[25] = {
+static doko_score_t const card_values[25] = {
     0,  4, 10, 11, //
     0,  4, 10, 11, //
     0,  4, 11,     //
@@ -36,7 +30,7 @@ static Score const card_values[25] = {
     10, 0,         //
 };
 
-static Suit const card_suits[25] = {
+static doko_suit_t const card_suits[25] = {
     CLUB,  CLUB,   CLUB,  CLUB,  //
     SPADE, SPADE,  SPADE, SPADE, //
     HEART, HEART,  HEART,        //
@@ -46,29 +40,32 @@ static Suit const card_suits[25] = {
     TRUMP, NOSUIT,               //
 };
 
-static CardSet const suit_sets[6] = {
+static doko_cardset_t const suit_sets[6] = {
     0x00000000000000fful, 0x000000000000ff00ul, 0x00000000003f0000ul,
     0x0000000000000000ul, 0x0000ffffffc00000ul, 0x0000fffffffffffful,
 };
 
-Score Simulate(GameInfo const* game_info_in, CardId next_card,
-               uint32_t* random_state) {
+doko_score_t doko_simulate(doko_game_info_t const* game_info_in,
+                           doko_card_t next_card,
+                           doko_random_state_t* random_state) {
     /* get a copy of the game_info and play the first card on it */
-    GameInfo game_info = *game_info_in;
-    PlayCard(&game_info, next_card);
+    doko_game_info_t game_info = *game_info_in;
+    doko_play_card(&game_info, next_card);
 
-    CardId legal_cards[12];
+    doko_card_t legal_cards[12];
     while (game_info.cards_left > 0) {
         /* determine legal cards to play */
-        uint8_t legal_cards_len = GetLegalCards(&game_info, legal_cards);
+        doko_count_t legal_cards_len =
+            doko_get_legal_cards(&game_info, legal_cards);
         /* determine random legal card and play it */
-        next_card = legal_cards[random_uint8(random_state, legal_cards_len)];
-        PlayCard(&game_info, next_card);
+        next_card =
+            legal_cards[doko_random_uint8(random_state, legal_cards_len)];
+        doko_play_card(&game_info, next_card);
     }
 
     /* return score for party of player 0 */
-    Score result = 0;
-    for (PlayerId p = 0; p < 4; p++) {
+    doko_score_t result = 0;
+    DOKO_FOR_EACH_PLAYER(p) {
         if (game_info.player_isre[p] == game_info.player_isre[0]) {
             result += game_info.player_scores[p];
         }
@@ -76,30 +73,41 @@ Score Simulate(GameInfo const* game_info_in, CardId next_card,
     return result;
 }
 
-uint8_t GetLegalCards(GameInfo const* game_info, CardId legal_cards[12]) {
-    /* determine legal cards to play */
-    CardSet legal_card_set = game_info->player_cardsets[game_info->next] &
-                             suit_sets[game_info->tricksuit];
-    if (legal_card_set == 0) {
+static doko_cardset_t get_legal_cardset(doko_game_info_t const* game_info) {
+    doko_cardset_t legal_cardset = game_info->player_cardsets[game_info->next] &
+                                   suit_sets[game_info->tricksuit];
+    if (legal_cardset == 0) {
         /* no card is legal, the suit enforcement is lifted */
-        legal_card_set = game_info->player_cardsets[game_info->next];
+        legal_cardset = game_info->player_cardsets[game_info->next];
     }
+    return legal_cardset;
+}
 
-    uint8_t legal_cards_len = 0;
-    uint8_t legal_card_id = 0;
-    while (legal_card_set != 0) {
-        if (legal_card_set & 1) {
+doko_count_t doko_get_legal_cards(doko_game_info_t const* game_info,
+                                  doko_card_t legal_cards[12]) {
+    /* determine legal cards to play */
+    doko_cardset_t legal_cardset = get_legal_cardset(game_info);
+
+    /* create the corresponding card ids in the target array */
+    doko_count_t legal_cards_len = 0;
+    doko_card_t legal_card_id = 0;
+    while (legal_cardset != 0) {
+        if (legal_cardset & 1) {
             legal_cards[legal_cards_len++] = legal_card_id;
         }
         legal_card_id++;
-        legal_card_set >>= 1;
+        legal_cardset >>= 1;
     }
     return legal_cards_len;
 }
 
-void PlayCard(GameInfo* game_info, CardId card) {
+doko_cardset_t doko_get_legal_cardset(doko_game_info_t const* game_info) {
+    return get_legal_cardset(game_info);
+}
+
+void doko_play_card(doko_game_info_t* game_info, doko_card_t card) {
     /* remove card from players hand */
-    game_info->player_cardsets[game_info->next] &= ~CARDSHIFT(card);
+    game_info->player_cardsets[game_info->next] &= ~DOKO_CARDSHIFT(card);
     --(game_info->cards_left);
 
     /* add player to re if the club queen is played */

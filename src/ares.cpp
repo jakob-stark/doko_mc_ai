@@ -15,8 +15,8 @@ struct Ares : doko::protocol::BasicAgent {
     std::string get_name() final { return "ares"; }
 
     move_t get_move() final {
-        std::array<CardId, 12> legal_cards{};
-        auto length = GetLegalCards(&game_info, legal_cards.data());
+        std::array<doko_card_t, 12> legal_cards{};
+        auto length = doko_get_legal_cards(&game_info, legal_cards.data());
         if (length <= 0 or length > 12) {
             throw rpc_exception{app_code_t::gameplay_error, "get_legal_cards"};
         }

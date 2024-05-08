@@ -14,22 +14,6 @@
  * @{
  */
 
-/**
- * @brief Structure to hold all the input information, that can be passed to
- *        the program
- */
-typedef struct {
-    uint8_t computer_player_id;      /**< which of the players is the one we are
-                                        going to simulate */
-    uint8_t starting_player_id;      /**< which of the players began the game */
-    CardId played_cards[48];         /**< all the played cards in order */
-    uint8_t played_cards_len;        /**< length of the played cards array */
-    CardId computer_player_hand[12]; /**< current hand cards of the computer
-                                        player */
-    uint8_t
-        computer_player_hand_len; /**< length of the current hand cards array */
-} InputInfo;
-
 /** @brief Analyzes the input
  *
  *  This function is used to convert the input into the internal data
@@ -45,15 +29,16 @@ typedef struct {
  *  @param[out] card_info This structure is filled with CardInfo data.
  *  @return 0 on success, a nonzero value if the input is invalid.
  */
-int analyze(InputInfo const* input, GameInfo* game_info, CardInfo* card_info);
 
-int analysis_start(GameInfo* game_info, CardInfo* card_info,
-                   PlayerId computer_player_id, PlayerId starting_player_id,
-                   CardId const cards[12]);
-int analysis_move(GameInfo* game_info, CardInfo* card_info,
-                  PlayerId computer_player_id, PlayerId player_id, CardId card);
-
-int analysis_finish(GameInfo const* game_info, int* points);
+int doko_analysis_start(doko_game_info_t* game_info,
+                        doko_card_info_t* card_info,
+                        doko_player_t computer_player_id,
+                        doko_player_t starting_player_id,
+                        doko_card_t const cards[12]);
+int doko_analysis_move(doko_game_info_t* game_info, doko_card_info_t* card_info,
+                       doko_player_t computer_player_id,
+                       doko_player_t player_id, doko_card_t card);
+int doko_analysis_finish(doko_game_info_t const* game_info, int* points);
 
 /**@}*/
 
