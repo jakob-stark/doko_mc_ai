@@ -75,6 +75,10 @@ typedef uint8_t doko_card_t;
 #define DOKO_CARD_VALID(card) ((card) < INVALID)
 #define DOKO_CARD_EQUAL(card1, card2) ((card1) / 2 == (card2) / 2)
 
+#define DOKO_CARDSET_CONTAINS(set, card) ((set) & DOKO_CARDSHIFT(card))
+
+#define DOKO_CARDSET_DIFFERENCE(rhs, lhs) ((rhs) & ~(lhs))
+
 typedef uint8_t doko_score_t;
 typedef uint8_t doko_count_t;
 
@@ -97,56 +101,71 @@ typedef struct {
     doko_player_t trickwinner;
 } doko_game_info_t;
 
-/** @brief short 2 byte card name abbreviations as null terminated strings
- *         (indexed by CardId) */
+/**
+ * @brief short 2 byte card name abbreviations as null terminated strings
+ *   (indexed by CardId)
+ */
 extern char const* const doko_card_names[25];
 
 /** @brief long card names as null terminated strings (indexed by CardId) */
 extern char const* const doko_card_names_long[25];
 
-/** @brief get legal cards for next player
+/**
+ * @brief get legal cards for next player
  *
- *  @param game_info pointer to the GameInfo object to get the legal cards from
- *  @param legal_cards pointer to array where the result is stored
- *  @return number of legal cards found and stored in legal_cards
+ * @param[in] game_info pointer to the GameInfo object to get the legal cards
+ * from
+ * @param[out] legal_cards pointer to array where the result is stored
+ * @return number of legal cards found and stored in legal_cards
  */
 doko_count_t doko_get_legal_cards(doko_game_info_t const* game_info,
                                   doko_card_t legal_cards[12]);
 
-/** @brief get legal cards for next player
+/**
+ * @brief get legal cards for next player
  *
  * this does the same calculations than @ref doko_get_legal_cards but returns
  * the result as cardset.
  *
- * @param game_info game info object to perform action on
+ * @param[in] game_info game info object to perform action on
  * @return a cardset containing the legal cards
  */
 doko_cardset_t doko_get_legal_cardset(doko_game_info_t const* game_info);
 
-/** @brief performs a card play
+/**
+ * @brief converts a cardset to an array of card ids
  *
- *  @param game_info pointer to GameInfo struct to operate on. Will not be
- *    preserved!
- *  @param card Id of card to play. Will not check for consistency. If the next
- *    player does not hold this card, the behaviour is undefined.
+ * @param[in] cardset
+ * @param[out] cards the target array - *must* be long enough to hold all cards
+ * in the cardset
+ */
+doko_count_t doko_cardset_to_array(doko_cardset_t cardset, doko_card_t cards[]);
+
+/**
+ * @brief performs a card play
+ *
+ * @param game_info[in,out] game info object to operate - will not be preserved!
+ * @param card id of card to play. Will not check for consistency. If the next
+ * player does not hold this card, the behaviour is undefined.
  */
 void doko_play_card(doko_game_info_t* game_info, doko_card_t card);
 
-/** @brief Simulates a random game
+/**
+ * @brief Simulates a random game
  *
- *  First play the card denoted by next_card onto the game in game_infe. After
- *  that, random but legal cards are played until the game is over. The score
- *  that was achieved by player0's team is returned.
+ * First play the card denoted by next_card onto the game in game_infe.
+ * After that, random but legal cards are played until the game is over. The
+ * score that was achieved by player0's team is returned.
  *
- *  @note The first card is given in next_random instead of being random. This
- *    allows the core functions to simulate a random game with a specific card
- *    and study how well that card behaves.
+ * @note The first card is given in next_random instead of being random.
+ * This allows the core functions to simulate a random game with a specific
+ * card and study how well that card behaves.
  *
- *  @param game_info pointer to GameInfo struct to simulate
- *  @param next_card the first card, that is to be played
- *  @param random_state pointer to 32bit random state used by Random and
- *    RandomInt
- *  @return Score value for player 0
+ * @param game_info pointer to GameInfo struct to simulate
+ * @param next_card the first card, that is to be played
+ * @param random_state pointer to 32bit random state used by Random and
+ *   RandomInt
+ * @return Score value for player 0
  */
 doko_score_t doko_simulate(doko_game_info_t const* game_info,
                            doko_card_t next_card,

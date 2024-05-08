@@ -83,26 +83,33 @@ static doko_cardset_t get_legal_cardset(doko_game_info_t const* game_info) {
     return legal_cardset;
 }
 
+static doko_count_t cardset_to_array(doko_cardset_t cardset,
+                                     doko_card_t cards[]) {
+    doko_count_t cards_len = 0;
+    for (doko_card_t card = 0; cardset != 0; card++, cardset >>= 1) {
+        if (cardset & 1) {
+            cards[cards_len++] = card;
+        }
+    }
+    return cards_len;
+}
+
 doko_count_t doko_get_legal_cards(doko_game_info_t const* game_info,
                                   doko_card_t legal_cards[12]) {
     /* determine legal cards to play */
     doko_cardset_t legal_cardset = get_legal_cardset(game_info);
 
     /* create the corresponding card ids in the target array */
-    doko_count_t legal_cards_len = 0;
-    doko_card_t legal_card_id = 0;
-    while (legal_cardset != 0) {
-        if (legal_cardset & 1) {
-            legal_cards[legal_cards_len++] = legal_card_id;
-        }
-        legal_card_id++;
-        legal_cardset >>= 1;
-    }
-    return legal_cards_len;
+    return cardset_to_array(legal_cardset, legal_cards);
 }
 
 doko_cardset_t doko_get_legal_cardset(doko_game_info_t const* game_info) {
     return get_legal_cardset(game_info);
+}
+
+doko_count_t doko_cardset_to_array(doko_cardset_t cardset,
+                                   doko_card_t cards[]) {
+    return cardset_to_array(cardset, cards);
 }
 
 void doko_play_card(doko_game_info_t* game_info, doko_card_t card) {
