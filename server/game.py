@@ -102,7 +102,7 @@ class Game:
 
             # calculate results
             for team in (team1, team2):
-                points = sum(agent.points for agent in team)
+                points = sum(agent.points for agent in team) / 2
                 name = team[0].name
                 print('team {} makes {} points in {} matches'.format(name, points, self.args.number))
 

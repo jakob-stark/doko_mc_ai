@@ -3,6 +3,7 @@
 #include "common.hpp"
 
 extern "C" {
+#include "ismcts.h"
 #include "mc.h"
 #include "simulate.h"
 }
@@ -13,8 +14,8 @@ extern "C" {
 using namespace doko::protocol;
 using namespace doko;
 
-struct Poseidon : doko::protocol::BasicAgent {
-    std::string get_name() final { return "poseidon"; }
+struct Apollo : doko::protocol::BasicAgent {
+    std::string get_name() final { return "apollo"; }
 
     move_t get_move() final {
         std::array<doko_card_t, 12> legal_cards{};
@@ -30,42 +31,41 @@ struct Poseidon : doko::protocol::BasicAgent {
         using clock = std::chrono::steady_clock;
         using std::chrono_literals::operator""ms;
 
-        std::array<unsigned, 12> results{};
         unsigned mc_calls{};
-
         doko_random_state_t random_state{1};
+        doko_tree_node_t* tree = doko_ismcts_tree_new();
+
         for (auto start = clock::now(); clock::now() - start < 100ms;) {
             doko_game_info_t game_info_copy = game_info;
 
             mc_calls++;
             doko_mc_sample(&game_info_copy, &card_info, &random_state);
-
-            for (uint8_t c = 0; c < length; c++) {
-                results[c] += doko_simulate(&game_info_copy, legal_cards[c],
-                                            &random_state);
-            }
+            doko_ismcts_run(tree, &game_info_copy, &random_state);
         }
 
-        int64_t max_score = -1;
-        doko_card_t max_card = 0;
+        float max_score = 0.0;
+        doko_card_t max_card = INVALID;
 
-        for (uint8_t c = 0; c < length; c++) {
-            if (results[c] > max_score) {
-                max_score = results[c];
-                max_card = legal_cards[c];
-            }
+        auto nnodes = doko_ismcts_tree_check(tree);
+        max_card = doko_ismcts_get_best_card(tree, &max_score);
+
+        doko_ismcts_tree_free(tree);
+
+        if (not DOKO_CARD_VALID(max_card)) {
+            throw rpc_exception{app_code_t::conversion_failed,
+                                "ismct_get_best_card"};
         }
 
         std::cerr << "chosen '" << doko_card_names_long[max_card / 2]
-                  << "' with an expected score of "
-                  << double(max_score) / double(mc_calls) << " after "
-                  << mc_calls << " samplings\n";
+                  << "' with an expected score of " << max_score << " after "
+                  << mc_calls << " samplings and creating " << nnodes
+                  << " nodes\n";
 
         return {convert::card_r(max_card), {}};
     };
 };
 
 int main() {
-    Poseidon agent;
+    Apollo agent;
     doko::protocol::run(agent);
 }
